@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 24 — backend + frontend testing of Pritha Cabinet CRM new features. Backend: 26/26 pytest cases pass (auth ACL, daybook read/write, cash verification upsert + ACL, daybook photos with APP_NAME prefix guard, /api/media/{token} PDF serving, admin PUT invoices/receipts + mixed payment validation, /api/receipts/source lookup, admin backup token/json/xlsx, daybook export-token/xlsx, /api/sales default scope=all + scope=mine, customer ledger totals + sale timeline receipts pdf_token). Frontend (390x844): admin daybook shows expected-cash-card, cash-calculator, den-input-500, calc-total updates to ₹1,000, calc-save produces recon-card, calc-clear present, daybook-photos + photo-capture visible, daybook-export in header, NO separate 'Cash count' button. emp2 correctly sees daybook-forbidden screen. Invoices card has inv-edit-<id> opening 'Edit INV-…' editor with inv-pay-cash/online/mixed + inv-save. Receipts card has rcpt-edit-<id> opening 'Edit RCPT-…' editor with rcpt-customer/amount/mode-*. Reports has backup-json (backup-xlsx testID present in code and visible in screenshot). CustomerPicker 'New customer' tab shows cust-dupe-box when typing existing name 'Poulomi' — with 'Already in the database — tap to use' banner. Customer ledger shows ledger-pdf-invoice-<id> and ledger-pdf-receipt-<id> buttons; PDF opens via /api/media/<token>. Cleaned up test data (cash_verification for today deleted, ZZTEST invoices/receipts/customers deleted).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration24_daybook_rework_backup.py",
+    "/app/test_reports/pytest/iteration24.xml"
+  ],
+  "action_items": [
+    "No fixes required — all backend endpoints + frontend flows for iteration 24 features are working correctly.",
+    "NOTE: /app/backend/server.py is now 4188 lines (still growing; iteration 22 already flagged >700-line guideline). Consider modularizing (auth / customers / sales / invoices / receipts / daybook / admin) for maintainability. Not blocking."
+  ],
+  "critical_code_review_comments": [
+    "server.py has grown to 4188 lines — well beyond the 700-line guideline. Non-blocking but overdue for a split.",
+    "DELETE /api/daybook/cash-verification is admin_only while the PUT is admin_or_collector. Confirmed matches spec ('emp1 -> 403 on delete'). Intentional but worth documenting in PRD.md.",
+    "Daybook photo prefix check hard-codes APP_NAME ('callflow-crm/'). If APP_NAME is ever changed via env, all historical photo/pdf paths + tokens will break. Consider storing/validating with an env-driven constant."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration24_daybook_rework_backup.py (new)",
+    "/app/test_reports/pytest/iteration24.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (26/26)", "frontend": "100% (all targeted testIDs and flows verified)"},
+  "seed_data_creation": "Ephemeral TEST/ZZTEST records created and cleaned up: an invoice for media-token check (deleted); an invoice + linked receipt for the edit flow (both deleted); a sale from admin for scope-defaults test (deleted); a customer + sale + receipt for ledger totals (all deleted). One admin cash_verifications record for date 2026-01-05 was created and deleted by the test. A brief cash_verifications entry for today created by the UI smoke test was also deleted via API after testing.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use /app/backend/tests/test_iteration24_daybook_rework_backup.py for regression of: daybook ACL & shape, cash verification upsert+ACL, daybook photos (APP_NAME='callflow-crm' prefix), /api/media/{token} PDF, admin PUT invoice/receipt, /api/receipts/source, admin backup + daybook.xlsx tokens, /api/sales scope, customer ledger totals & timeline pdf_token. Frontend flows for iteration 24 mostly under: daybook-screen, cash-calculator (den-input-500 etc.), calc-save/clear, daybook-photos/photo-capture, inv-edit-<id> + inv-pay-<mode>, rcpt-edit-<id>, cust-dupe-box, ledger-pdf-<kind>-<id>, backup-xlsx/backup-json. Login testIDs: login-username, login-password, login-submit. emp1 is (or was) assigned the collector; the test suite auto-assigns via PUT /api/admin/collector to keep results deterministic.",
+  "rca_of_issue": "N/A — no bugs found."
+}

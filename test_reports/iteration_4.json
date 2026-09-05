@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 4 — verified 3 new features on Pritha Cabinet CRM. Backend: 17/17 pytest passes for new + regression (login admin/emp, list users admin-only, list customers, list sales; PATCH /api/admin/users/{username} covers non-admin=403, unknown=404, empty patch=400, short pw=400, blank display_name=400, display_name persists, password update actually rotates login credential and is restored; POST /api/customers by employee forces assigned_to=self with status=pending, ignores employee-supplied assigned_to override, duplicate phone→409, end-to-end create-customer-then-sale works). Frontend (mobile 390x844): (a) Dashboard for admin AND emp7 shows the Pritha Cabinet logo (assets/images/pritha-logo.jpg) + brand name 'Pritha Cabinet' + 'CUSTOMER RELATIONSHIP' tagline row above the greeting — confirmed for both roles. (b) Admin More → 'Manage team' opens /team screen, 7 employees listed, tapping emp7 opens the edit sheet with display_name + password fields, save triggers 'Updated Employee 7' toast at the bottom, list reflects the change; then restored back to 'Employee 7'. (c) Employee 7 opened Punch a sale from Progress, switched to 'New customer' mode, filled name+phone+amount+product, submitted; new customer 'TESTUI PunchNew' (5558013261) appeared in the Calls list AND the leaderboard for emp7 updated to '2 sales · ₹2,354' — proves both /api/customers and /api/sales fired in the same submit. Duplicate-phone UI path is present in code (PunchSaleModal L69-77) and fully verified at the backend layer (409 test passes). No blocking issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/test_reports/pytest/iteration4.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional: verify emp7 password stays 'Emp@2026' in memory/test_credentials.md — the test restores it programmatically at the end of test_password_update_changes_login (asserted with a fresh login).",
+    "Optional UX: after a successful punch-sale-new-customer submit, the sheet closes and the parent screen (Progress) refreshes; consider a subtle success toast so the user knows the customer was also saved (not just the sale)."
+  ],
+  "critical_code_review_comments": [
+    "server.py::admin_update_user (L493-515) — clean: display_name trim/length guard, password ≥4 rule, and 400 when both fields None. Uses find_one_and update-via-set, returns fresh doc. Good.",
+    "server.py::create_customer (L529-556) — enforces employee cannot override assigned_to (L540-541), unique phone_norm index prevents race duplicates, status defaults to 'pending'. Matches spec.",
+    "team.tsx — EditEmployeeModal builds patch with only-changed fields; if display_name unchanged AND password blank → 'Nothing to update' error prevents an empty PATCH (matches the backend 400 rule). Good UX guard.",
+    "PunchSaleModal.tsx (L64-78) — creates customer first, then sale; on 409 shows 'This phone number already exists' and short-circuits without punching a sale. Correct ordering — no orphaned sale on duplicate.",
+    "index.tsx brandLogo — <Image> is loaded from require('../../assets/images/pritha-logo.jpg') so it is bundled. Confirmed rendering as <img src='/assets/?unstable_path=./assets/images/pritha-logo.jpg'> in web preview."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py (NEW — 17 tests for PATCH admin user, employee-create-customer flow, and regressions)"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17) — all new-feature and regression assertions pass",
+    "frontend": "100% for the three new flows (dashboard brand row, /team edit sheet, punch-sale-new-customer end-to-end). Duplicate-phone toast not re-verified in the browser (single-run modal timeout after successful test) but code path + backend 409 both green."
+  },
+  "seed_data_creation": "Three transient TEST_ customers created by pytest during the employee-create tests — cleaned up automatically by teardown_class. One UI-created customer 'TESTUI PunchNew' (5558013261) with an associated ₹999 sale for emp7 — this remains in emp7's dashboard/leaderboard for the current day.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Regression suite = /app/backend/tests/test_callflow_api.py + /app/backend/tests/test_new_features.py + /app/backend/tests/test_iteration4.py. To rerun iteration-4 alone: `EXPO_PUBLIC_BACKEND_URL=$(grep EXPO_PUBLIC_BACKEND_URL /app/frontend/.env|cut -d= -f2) pytest /app/backend/tests/test_iteration4.py -v`. Note: the password-change test rotates emp7's password within a single run and restores it; if the test is killed mid-run, emp7 could be left on 'NewPass@2026' — recover by admin PATCH or by re-running the same test. The Pritha logo asset lives at /app/frontend/assets/images/pritha-logo.jpg and is served through Expo's asset resolver, not the backend.",
+  "rca_of_issue": "N/A — no blocking bugs found this iteration."
+}

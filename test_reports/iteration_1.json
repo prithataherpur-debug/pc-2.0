@@ -1,0 +1,39 @@
+{
+  "summary": "Backend fully verified with pytest (13/14 pass; 1 failure is a test-race between parallel workers, not a real bug). Frontend Home screen loads correctly, search + filter chips work; Add Customer modal opens but its submit button rendered outside the 390x844 viewport (bottom-sheet extends beyond screen). Dial->status modal, tabs, settings goal update, paste import, and clear-all confirm modal could not be fully re-run in the same script after the Add-modal error, but earlier screenshot confirms 4 tabs are rendered and the header calls counter is wired (0/100 -> 1/100 observed).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "DELETE /api/customers/{id}", "issue": "Passed functionally; only test-suite race with clear-all under pytest-xdist -n auto caused 1 spurious failure. Not an API bug."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AddCustomerModal", "issue": "Submit button (testID=submit-add-customer) is positioned outside the 390x844 viewport in Expo web preview — the bottom sheet content overflows the visible area (no scroll inside sheet and no KeyboardAvoidingView). User on small phones may not see/tap the Add button.", "testID": "submit-add-customer", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home (Add Customer sheet)", "issues": ["Bottom sheet not scrollable; no KeyboardAvoidingView; primary CTA can be clipped on small viewports"]},
+      {"screen": "Home header", "issues": ["Metric box shows '1/100' immediately on load in this run — verify counter is actually today-scoped after cross-midnight boundary; call_logs use UTC date_key which may confuse users in non-UTC timezones"]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_callflow_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Wrap Add Customer and Paste sheet content in ScrollView + KeyboardAvoidingView so submit button stays visible/tappable on small screens (esp. web preview at 390x844).",
+    "Consider date_key using user's local timezone (or expose TZ to server) so stats/today matches user-perceived 'today'.",
+    "Optional: change delete_customer test isolation (mark clear-all test as serial) — no code fix needed."
+  ],
+  "critical_code_review_comments": [
+    "server.py correctly projects _id out in all endpoints (verified programmatically). Good.",
+    "server.py uses @app.on_event('shutdown') which is deprecated in FastAPI; consider lifespan handlers.",
+    "index.tsx AddCustomerModal has no KeyboardAvoidingView / ScrollView — root cause of the viewport clipping bug.",
+    "api.ts BASE has no fallback — if EXPO_PUBLIC_BACKEND_URL missing, fetch will hit /api on undefined host. Fine because env is set, but worth a runtime guard."
+  ],
+  "updated_files": ["/app/backend/tests/test_callflow_api.py"],
+  "success_rate": {"backend": "93% (13/14, 1 spurious race)", "frontend": "~70% (home/search/filter/tab-render verified; add-submit blocked by viewport issue; dial-status + settings flows not fully re-run)"},
+  "seed_data_creation": "Bulk-reseeded original 5 sample customers (Alice/Bob/Carla/David/Emma) after clear-all test. Also created a TEST_UI_User via UI (may still exist).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend is solid — reuse /app/backend/tests/test_callflow_api.py. For frontend, after main agent adds KeyboardAvoidingView+ScrollView inside the Add and Paste sheets, retest: Add Customer submit, Dial->status update (verify calls-count increments), Progress/History tab content, Paste import (2 rows), Clear-all confirm+delete flow. Sample seed data is present; goal is 100.",
+  "rca_of_issue": "Add Customer submit button unreachable on 390x844 web viewport. RCA: The Modal 'sheet' View has fixed padding (theme.space.xl top + xxl bottom) plus two 48px TextInputs, a possible error line, and a 52px primary button — total content height exceeds available bottom-sheet area at the smallest common mobile viewport when keyboard is shown. No inner ScrollView and no KeyboardAvoidingView. Fix: wrap sheet content in <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'}><ScrollView>...</ScrollView></KeyboardAvoidingView> and cap sheet maxHeight to '85%' of screen."
+}

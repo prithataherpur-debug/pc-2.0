@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 21 backend bug-fix regression complete. 5/5 pytest tests PASSED for the daybook invoice cash/online split + grand_total math rewrite. Verified: (1) creating an invoice with total=₹5000, cash_amount=3000, online_amount=2000 causes GET /api/daybook to reflect exact +3000/+2000/+5000 deltas on invoices.cash/online/total AND on grand_total.cash/online/total; (2) legacy invoice (inserted directly via Mongo with no cash_amount/online_amount/payment_mode fields) is treated as all-cash by daybook aggregation (cash+=total, online+=0); (3) daybook grand_total math is correct across mixed sources — 1 invoice (3000/2000) + 1 collection (1000/500) + 1 standalone 'other' receipt (200/100) yields grand_total.cash=4200, online=2600, total=6800 as expected; (4) daily_sales section is NOT touched/double-counted by grand_total when no daily_sales doc is created; (5) daybook response shape intact — due_collection/daily_sales/receipts/invoices each expose cash/online/total/entries and total_collection breakdown card still has daily_sales/invoices/due_collection/money_receipts/grand_total, all numeric and matching each section's total. Also re-ran iteration_20 regression suite (12/12 PASSED) — invoice-no-sale + split behaviour unchanged.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration21_daybook_invoice_split.py",
+    "/app/test_reports/pytest/iteration21.xml"
+  ],
+  "action_items": [
+    "None — daybook invoice cash/online split + grand_total rewrite verified end-to-end. Main agent can proceed with UI (daybook screen should now correctly render invoice cash/online figures instead of the pre-fix 0/0)."
+  ],
+  "critical_code_review_comments": [
+    "server.py:1927-1994 (daybook invoice/grand_total block) — logic is correct but note the branch at L1955-1956 sets legacy mixed payment_mode to (c_amt=total, o_amt=0) which effectively treats legacy 'mixed' as all-cash. Matches the receipt branch at L1878-1879 for consistency, but if any legacy 'mixed' invoices exist in prod their online share will silently become cash in the daybook. Non-blocking (aligns with legacy fallback contract) — flag for main agent awareness.",
+    "server.py still 3421 lines — repeated call-out from iter19/iter20. The daybook function alone is ~230 lines; splitting invoice/collection/receipt aggregation into helpers would help.",
+    "Grand-total docstring in code (L1984-1989) mentions 'Daily cash counts (physical cash-in-hand)' but the implementation intentionally excludes daily_sales from grand — comment is misleading. Recommend updating the comment to say 'daily_sales excluded because it represents physical cash-verification only'."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration21_daybook_invoice_split.py (new — 5 pytest cases, autouse cleanup covering receipts, invoices, collections, legacy-invoice Mongo doc, and TEST21 customers)"
+  ],
+  "success_rate": {"backend": "100% (5/5 iter21 + 12/12 iter20 regression)", "frontend": "n/a (backend-only request)"},
+  "seed_data_creation": "All test data phone-prefixed with '91TEST21'. Cleanup teardown deletes created receipts, invoices, collections, TEST21 customers, and purges the legacy invoice inserted directly into Mongo (via API DELETE + direct Mongo delete_many fallback). No production/seeded data touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 21 daybook fix is green. If future iterations touch the daybook aggregation, extend TestDaybookGrandTotalMath for additional source_types (sale-linked receipt vs collection-linked receipt should NOT double-count — currently receipts with source_type in {sale, invoice, collection} are informational). Legacy invoice fallback is at server.py:1950-1958 — any future migration adding cash_amount/online_amount to old invoices should preserve backward-compat behaviour tested in TestDaybookLegacyInvoice.",
+  "rca_of_issue": "Pre-fix: daybook endpoint aggregated invoices.total but hardcoded cash=0/online=0, so the daybook UI showed ₹0 cash / ₹0 online under Invoices even when invoices had legitimate cash+online splits. Additionally, grand_total previously summed daily_sales (physical cash count) + collections + receipts which double-counted collections against employee-side cash. Fix (server.py L1927-1994): (a) read invoice.cash_amount / invoice.online_amount and fall back to payment_mode for legacy docs, (b) rewrite grand_total to sum collections.cash + invoices.cash + standalone-'other'-receipts.cash (and same for online), explicitly excluding daily_sales (now positioned as cash-verification/physical count) and receipts linked to sale/invoice/collection (informational to avoid double count). Verified via 5 focused daybook delta tests using snapshot-before / snapshot-after pattern to insulate from any pre-existing rows for TODAY."
+}

@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 7 — full validation of admin user management (create/rename/cascade/delete) + /account screen. Wrote /app/backend/tests/test_iteration7_user_mgmt.py (26 tests, ALL PASSING) covering POST /api/admin/users (auth, validation, duplicate 409, creation success + immediate login), PATCH /api/admin/users/{username} with new_username (cascade rename verified: customer.assigned_to and sale.user both updated old→new; old username login 401, new username login 200; duplicate rename → 409; invalid format → 400; combined password+goal+rename works), DELETE /api/admin/users/{username} (cannot delete admin 400, non-admin 403, 404 not-found, requires reassign_to when customer count>0 → 400 without, 200 with; verifies customer.assigned_to moved to target, deleted user cannot login, delete of renamed user with customers works), and admin self-rename+password change + restore-to-seed (admin→zzadmin{RUN}→admin, Admin@2026 restored). Frontend mobile smoke (Chromium 390x844): /team ‘Add’ pill opens Add-employee modal — empty submit shows ‘Login ID must be 3-30 chars…’; valid submit creates row, toast ‘Added Zz UI Test’ shows, employee-count pill 7→8. Edit modal rename via ‘Login ID (username)’ field renames row (team-row-zzui454 → team-row-zzui454x) with all references updated. Danger-zone flow: ‘Remove employee’ reveals reassignment picker showing all emps (reassign-emp1 pill), confirm-delete after picking emp1 removes row and moves customer. /account (More → My account): shows avatar ‘A’, role ADMIN, current username @admin; editing display-name only saves + returns to /more WITHOUT sign-out (correct — no ‘Credentials updated’ toast); editing login-id or password path is wired to signOut() after 1.2s (verified in code /app/frontend/app/account.tsx L58-65 and covered by the backend TestAdminSelf class which exercises rename+pw then restore). Regression: 60/61 pre-existing tests still pass — the one flaky failure (test_new_features.py::test_leaderboard_ordering_and_ranks) is pre-existing seed drift (emp2 display_name was manually changed to ‘Alok ghoah’ in an earlier UI session, tie-breaker asserts strict emp1-7 alphabetical order on display_name) and is unrelated to iteration 7. Final DB state: admin + emp1..emp7 (8 users), admin/Admin@2026 works, test_credentials.md unchanged, no TEST_ customers or zztest users leaked. No red-screens, no navigation crashes, no react-native issues detected.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration7_user_mgmt.py",
+    "/app/test_reports/pytest/iteration7.xml"
+  ],
+  "action_items": [
+    "(Optional/pre-existing, not blocking) test_new_features.py::test_leaderboard_ordering_and_ranks fails because emp2.display_name was manually edited to 'Alok ghoah' during earlier UI sessions; either reset display_name back to seed defaults on server restart, or relax the ordering assertion to use username tie-breaker instead of display_name. This is NOT caused by iteration 7 changes."
+  ],
+  "critical_code_review_comments": [
+    "server.py cascade_rename_user (L508-516) — correctly updates all 6 collections (users, customers, call_logs, sales, attendance, expenses, push_users). Order is safe: primary key first, then all foreign refs. Good.",
+    "server.py admin_update_user (L544-571) — validation → $set/$unset under OLD username → THEN cascade rename. This ordering is correct; if it renamed first then applied updates it would need to know the new name. Good.",
+    "server.py admin_delete_user (L606-641) — good guardrails (cannot delete admin, cannot delete self, requires reassign_to when customers assigned, refuses to reassign to admin because r_user.role != 'employee'). Preserves call_logs/sales for audit by design (comment on L637). Good.",
+    "server.py — cascade_rename_user does NOT wrap the 7 updates in a MongoDB transaction; in the (unlikely) event that the process dies mid-cascade some collections will have the old username and some the new. Given single-tenant/small-scale CRM this is acceptable, but flag for the main agent if HA is a future requirement.",
+    "account.tsx (L58-65) — needsSignOut branch: signOut() runs after 1.2s so the toast is briefly visible; display-name-only branch runs router.back() after 800ms. Good.",
+    "team.tsx AddEmployeeModal — client-side validation mirrors server (USERNAME_RE, pw>=4, goal 1-1000). Good — no double-round-trip for the common bad input case."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration7_user_mgmt.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (26/26) on iteration 7 tests; 60/61 (98.4%) on pre-existing regression — the 1 failure is pre-existing seed drift, not caused by iteration 7",
+    "frontend": "100% for the 4 target flows on 390x844: Add employee, Rename via edit modal, Delete with reassignment picker, /account screen navigation + display-name-only save"
+  },
+  "seed_data_creation": "Test users zztest{RUN}a/b/c and zzadmin{RUN} were created and DELETED (with reassignment) inside the same test. UI test created zzui{RUN} → renamed to zzui{RUN}x → deleted, and zztui{RUN} with 1 customer → deleted via UI reassignment picker to emp1, then TEST_UITEST_DEL / TEST_Rename_ / TEST_Del_ customers were cleaned up via API. Verified final state: 8 users (admin + emp1..emp7), no lingering TEST_ customers, /api/auth/login works with admin/Admin@2026 and emp1/Emp@2026.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All new endpoints stable. If iterating: run with -n 0 (serial) — the TestAdminSelf class renames admin mid-suite so xdist parallelization causes cross-contamination (other workers using the module-scoped admin_token get 401). See test_iteration7_user_mgmt.py: cleanup autouse fixture attempts DELETE on all 3 test usernames but is best-effort only. Frontend note: on /account, after display-name-only save, react-navigation warns 'GO_BACK was not handled' only when the screen was reached via router.push('/account') directly rather than through /more — cosmetic dev warning, no runtime impact. Pre-existing leaderboard-ordering test failure needs a data reset or a code change to use username-based tie-breaker."
+}

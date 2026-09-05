@@ -1,0 +1,144 @@
+{
+  "app_name": "CallFlow CRM",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A hyper-efficient, distraction-free command center that prioritizes action and operational clarity for high-volume sales tasks.",
+  "color": {
+    "surface": "#F9F9F9",
+    "onSurface": "#1C1C1E",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#1C1C1E",
+    "surfaceTertiary": "#F2F2F7",
+    "onSurfaceTertiary": "#3A3A3C",
+    "surfaceInverse": "#1C1C1E",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#D35400",
+    "brandPrimary": "#D35400",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#C0392B",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#FAD7A1",
+    "onBrandTertiary": "#D35400",
+    "success": "#2E8B57",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D4AC0D",
+    "onWarning": "#FFFFFF",
+    "error": "#E74C3C",
+    "onError": "#FFFFFF",
+    "info": "#34495E",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E5EA",
+    "borderStrong": "#C7C7CC",
+    "divider": "#E5E5EA"
+  },
+  "typography": {
+    "displayFontFamily": "Space Grotesk",
+    "textFontFamily": "Geist",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical padding, tight horizontal grouping. Use whitespace for hierarchy instead of borders where possible.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": 1,
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use glass on bottom tab bar.",
+      "Use glass for sticky daily progress header over the scrolling call list.",
+      "Use glass on bottom sheet headers."
+    ],
+    "dont's": [
+      "No glass on normal list item cards.",
+      "No glass on form inputs."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home",
+      "purpose": "High-density call list with a sticky daily progress tracker to hit the 100 calls/day goal.",
+      "states": {
+        "loading": "Skeleton list of 10 items",
+        "empty": "Empty desk illustration with 'No contacts imported. Let's build your list.' and an 'Import CSV' CTA.",
+        "error": "Error loading list, tap to retry."
+      },
+      "layout": "Sticky glass header showing daily progress (e.g., '35 / 100 Calls' progress bar). Below it, a virtualized list of customer cards. Each card displays Name, Phone, and a large, distinct 'Dial' button. Swipe-right gesture reveals quick status updates (Interested, Callback, etc.)."
+    },
+    {
+      "name": "Progress",
+      "purpose": "A dashboard visualizing the day's call metrics and conversion statuses.",
+      "states": {
+        "loading": "Spinner centered.",
+        "empty": "No data yet.",
+        "error": "Error loading metrics."
+      },
+      "layout": "Use a card-based layout. Top card is a large circular progress ring for the 100-call goal. Below, a 2-column grid showing counts for 'Interested', 'Not Interested', 'Callback', and 'No Answer'. Use mono font (Space Grotesk) for all metrics."
+    },
+    {
+      "name": "History",
+      "purpose": "Log of previous days' performances and historical call logs.",
+      "states": {
+        "loading": "Spinner.",
+        "empty": "No history available.",
+        "error": "Could not fetch history."
+      },
+      "layout": "A categorized list grouped by date. Each date acts as a sticky section header. Rows show total calls made that day and a breakdown of outcomes."
+    },
+    {
+      "name": "Settings",
+      "purpose": "Manage app configuration, import lists, and set daily goals.",
+      "states": {
+        "loading": "Spinner.",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Standard iOS-style grouped list. Section for 'Data' (Import CSV, Paste text), section for 'Goals' (Edit daily call target), and 'Data Management' (Clear list)."
+    }
+  ],
+  "images": {
+    "empty_state_desk": {
+      "url": "https://images.unsplash.com/photo-1449247709967-d4461a6a6103?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTZ8MHwxfHNlYXJjaHwxfHxlbXB0eSUyMGRlc2slMjBtaW5pbWFsJTIwaWxsdXN0cmF0aW9ufGVufDB8fHx8MTc4Nzk5MzQ3OHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimal white desk representing an empty or fresh start."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Prioritize operational clarity and efficiency. The primary user flow is dialing a number and immediately logging its outcome.",
+    "Implement swipe actions on the home list items (react-native-gesture-handler) for rapid status tagging, saving the user from opening a detail view.",
+    "Keep the 'Dial' button large (min 44x44pt) and distinct on every list row to prevent mis-taps.",
+    "Ensure the daily progress bar at the top of the Home screen is sticky and uses a frosted glass effect (expo-blur) so the list scrolls neatly beneath it.",
+    "Use Space Grotesk (Mono variant style) for all numeric metrics to reinforce the command-center feel.",
+    "Use @gorhom/bottom-sheet for the Call Status logger that pops up instantly after a call is initiated, avoiding full-screen context switching.",
+    "Implement haptic feedback (expo-haptics) on logging a call and reaching the 100-call milestone to provide tactile confirmation."
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 5 — verified all 3 new features on Pritha Cabinet CRM (duplicate-phone handoff, team overview stats, per-user daily goals). Backend: 25/25 pytest passes in /app/backend/tests/test_iteration5.py — covers (a) GET /customers/lookup?phone auth-required/400-invalid/exists-false/is_mine true+false; (b) GET /admin/team-stats 401/403/admin-shape (all 13 required keys + 7 rows + default_goal); (c) PATCH /admin/users daily_goal boundary (0→400, 1001→400), combined with display_name, reflects in /admin/users listing, /admin/team-stats and /stats/leaderboard 'goal' column; (d) /stats/today.goal follows per-user custom or falls back to settings default; (e) /stats/leaderboard per-row pct == min(1, total/user_goal). Regressions green: admin/emp7 login, customers list, admin users list (8 total), PATCH display_name persists, empty PATCH→400. Frontend (mobile 390x844): (1) /team page — summary card shows 4 pills (Calls today / Sales / Revenue ₹ / On duty N/7), all 7 employee rows render with avatar, colored ABSENT/On duty/Checked out pill, '@username · N customers', 3-metric row (calls/goal, sales, ₹revenue), progress bar, caption '% of daily goal · custom goal' only when custom — verified emp3 with custom goal 53 shows the ' · custom goal' suffix while emp1 does not. (2) Team edit modal — 'Daily call goal' text field with placeholder 'Default: 50' visible; setting emp4 to 77 and saving fires PATCH, closes modal, and the row instantly re-renders to '0 / 77 CALLS' + '0% of daily goal · custom goal'; reopening pre-fills with 77; setting 2000 shows the validation error banner. (3) PunchSaleModal duplicate handoff — seeded a customer 'DupTest UI' (+91 9998887777) for emp7, opened Punch from /sales, switched to New customer, entered a different name with the same phone + amount 500 and submitted → sale was NOT created; yellow banner appeared 'Already in our list · DupTest UI · assigned to you' with an amber 'Use' pill; tapping Use flipped mode to Existing with 'DupTest UI' preselected in the picker button; second submit created the sale and it appears in the sales list ('DupTest UI · ₹500'), confirming it linked to the existing customer id. No red screens, no navigation crashes, no blocking issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration5.py",
+    "/app/test_reports/pytest/iteration5.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional cleanup: iteration test suite currently has no explicit 'clear daily_goal' API — PATCH cannot unset once set. Consider allowing daily_goal:null in AdminUserUpdate to $unset the field, so admin can revert to the workspace default without a direct DB edit.",
+    "Optional UX: the emp4 edit-modal daily-goal input value stays populated with '77' on re-open. If admin wants to fall back to default, they must know that leaving the field blank on a subsequent save is a no-op (no clear). Consider a small 'Reset to default (50)' link next to the field."
+  ],
+  "critical_code_review_comments": [
+    "server.py::lookup_customer (L612-624) — returns is_mine flag from the current user's viewpoint; uses phone_norm index so lookup is O(log n). Good.",
+    "server.py::admin_team_stats (L525-599) — 4 aggregations executed serially with `to_list(200)` caps; fine for 7 employees today but for larger tenants the customers aggregation ($group by assigned_to) will scale linearly with total customers. Not a blocker.",
+    "server.py::admin_update_user (L514-517) — boundary 1..1000 is inclusive; matches spec. Note: daily_goal cannot be cleared via PATCH (no None-sentinel handling).",
+    "server.py::stats_today (L890) — cleanly reads `u.get('daily_goal')` (falsy→default). Since 0 is invalid via the setter, no risk of 0 overriding default. Good.",
+    "PunchSaleModal.tsx (L80-105) — on 409, calls api.lookupCustomer to fetch the existing customer for the banner; handles lookup failure with a graceful fallback message. Correct control flow — no sale is punched until the user retries via Existing mode.",
+    "team.tsx::EditEmployeeModal (L270-284) — only pushes daily_goal in the patch when the value actually changed OR the user was on the default before; empty string is treated as no-op (matches spec 'empty value doesn't set daily_goal'). Good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration5.py (NEW — 25 tests for lookup, team-stats, PATCH daily_goal, /stats/today + leaderboard goal, and regressions)"
+  ],
+  "success_rate": {
+    "backend": "100% (25/25) — all new-feature and regression assertions pass",
+    "frontend": "100% for the three new flows (team overview + summary pills, edit-modal daily-goal persistence and validation, PunchSaleModal duplicate-phone banner + 'Use' handoff + successful sale on existing customer id)"
+  },
+  "seed_data_creation": "Created customer 'DupTest UI' (+91 9998887777) for emp7 to reproduce the duplicate-phone handoff — DELETED after the UI test. One sale row created against DupTest UI during the UI test — DELETED via a direct db.sales.delete_many({'customer_name':'DupTest UI'}). Restored emp3/emp4/emp6 daily_goal via $unset (they were set to custom by pytest and the UI test). Note: emp1 password was found rotated by a prior run (401 on Emp@2026); admin PATCH reset it to Emp@2026 before running the suite.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Regression suite = /app/backend/tests/test_callflow_api.py + /app/backend/tests/test_new_features.py + /app/backend/tests/test_iteration4.py + /app/backend/tests/test_iteration5.py. Rerun iteration-5 alone: `EXPO_PUBLIC_BACKEND_URL=$(grep EXPO_PUBLIC_BACKEND_URL /app/frontend/.env|cut -d= -f2) pytest /app/backend/tests/test_iteration5.py -v`. Watch out for: (a) emp1 password can be broken by prior password-rotation tests — reset via `PATCH /api/admin/users/emp1 {password:'Emp@2026'}` as admin; (b) daily_goal cannot be cleared through the public API, so tests that set custom goals leave emp3/emp6 with residual custom values unless you $unset them from Mongo (as done here). New testIDs available: team-screen, team-row-{username}, edit-display-name, edit-daily-goal, edit-password, edit-save, edit-cancel, sale-mode-existing, sale-mode-new, sale-new-name, sale-new-phone, sale-use-duplicate, sale-customer-picker, sale-amount, sale-submit.",
+  "rca_of_issue": "N/A — no blocking bugs found this iteration."
+}

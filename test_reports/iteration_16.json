@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 16 (sales.linked_receipts + /customers/{id}/ledger + daybook reconciliation & total_collection + admin reconcile-ack + relaxed POST /api/collections) tested end-to-end via pytest. 10/10 tests PASSED. Verified: (a) GET /api/sales returns linked_receipts=[] initially and becomes populated (receipt_no, amount, payment_mode, pdf_token) after posting a receipt with source_type='sale' & source_id=sale.id; (b) GET /api/customers/{cust_id}/ledger returns 200 for valid, 404 for unknown; summary math holds (total_billed=Σsales, total_received=Σreceipts, due_balance=billed-received); timeline is sorted DESC by 'when'; counts match; (c) receipts matched by customer_mobile phone are included in the ledger even when the receipt has no source_id link (verified via a standalone source_type='other' receipt with only phone match); (d) daybook.reconciliation has all 8 required keys and per_denom has exactly 6 rows with {denom, employees_pcs, collector_pcs, variance_pcs, variance_amount}; injection delta verified (emp1 daily_sale {500:2,100:3}=1300 + admin collection {500:2,100:2}=1200 -> emp_cash delta=+1300, col_cash delta=+1200, ₹100 row emp_pcs delta=+3 / col_pcs delta=+2, variance invariant holds); (e) daybook.total_collection carries daily_sales/invoices/due_collection/money_receipts/grand_total; (f) POST /api/daybook/reconcile-ack — emp1 -> 403, admin ok -> {ok, acknowledged_at}, ack persists (subsequent GET /api/daybook returns ack + acknowledged_by='admin' + acknowledged_at); empty note -> 400; (g) POST /api/collections now accepts emp2 even when the designated collector is set to a different user (emp1) — entry.user is 'emp2' (the poster), not the collector; (h) GET /api/collections regression: linked_receipts still populated per entry. Test data prefixed TEST_it16 and fully cleaned up (0 residual receipts/sales/customers/collections/daily_sales verified against admin listing).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration16_ledger_reconciliation.py",
+    "/app/test_reports/pytest/iteration16.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py customer_ledger (line 983): sales query only matches by customer_id — legacy sale rows without customer_id will be missed. Comment on line 997 explicitly acknowledges 'no direct phone field on sales, skip phone fallback' — consider indexing sales.customer_name or storing phone on sale to unify with invoices/receipts fallback. Not a bug for the current spec (all new sales carry customer_id) but a data-migration risk.",
+    "customer_ledger due_balance uses total_billed - total_received but the comment says 'invoice already in sales' — since invoices auto-post a sale row with source='invoice', including invoices separately in the timeline is correct for display but the summary_billed_manual field is not consumed anywhere in the returned shape docs; consider exposing it in API docs to prevent frontend confusion.",
+    "daybook reconciliation math trusts DENOMS ordering [500,200,100,50,20,10] — per_denom order is fixed but the response doesn't include a schema/version header. Frontend must sort/lookup by denom, not index.",
+    "POST /api/daybook/reconcile-ack has no rate limit and no audit log beyond the single note (last-write-wins on the reconciliation collection). If admins need to re-ack with a new note the old note is overwritten silently. Consider storing history in an array or a companion audit collection.",
+    "server.py is now ~3001 lines (grew from 2779 in iter15). Splitting customers/ledger + daybook + invoices/receipts into router modules is overdue.",
+    "POST /api/collections (line 1557) docstring says 'only collector/admin can WRITE' on the list endpoint (line 1593) but the create is now open to any employee — line 1593 comment is stale and misleading, please update."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration16_ledger_reconciliation.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 passed)",
+    "frontend": "not tested (backend-only iteration per review request)"
+  },
+  "seed_data_creation": "During tests, created 3 customers, 3 sales, 5 money receipts, 3 collections, 1 daily_sale, and 1 reconciliation.ack row (all prefixed TEST_it16 in notes/narration). Everything is cleaned up in the module-scope teardown fixture via admin DELETE endpoints; verified 0 residual leaks against admin listings for receipts/sales/customers/collections/daily_sales. The reconciliation.ack row for TODAY's date_key remains in db.reconciliation (no delete endpoint exists — the collection is keyed by date and is idempotent, so no leak accumulation).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run with: `EXPO_PUBLIC_BACKEND_URL=$(grep EXPO_PUBLIC_BACKEND_URL /app/frontend/.env | cut -d= -f2) pytest backend/tests/test_iteration16_ledger_reconciliation.py -v -o addopts=''`. The pytest.ini in /app/backend forces `-n 2 --dist loadscope` which is fine here (each test class is pinned to one xdist worker), but for readability use `-o addopts=''` to run serially. The reconciliation test uses today's date_key so daily_sales/collections roll into the same day; because other tests may leave data on TODAY, that specific test snapshots pre-state and validates DELTA rather than absolute values. If you re-run tests you may see the reconciliation.ack from a prior admin run still surfacing in GET /api/daybook — that's expected (upsert on date_key, no leak).",
+  "rca_of_issue": "N/A — all specified behaviors verified working. First run had 1 failure on the reconciliation ₹100 variance_pcs assertion; RCA: pre-existing daily_sales/collections for TODAY meant the collector pcs sum exceeded employees pcs. Fix (test-only): switched to pre-state snapshot + delta assertion; the backend logic itself was correct (variance = emp − col invariant holds)."
+}

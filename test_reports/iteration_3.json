@@ -1,0 +1,47 @@
+{
+  "summary": "Iteration 3 — verified the 4 new features on CallFlow CRM. Backend: 19/19 new-feature pytest tests pass (leaderboard structure/ordering/is_me/auth, bulk preview mixed rows with correct new/dup/reason/assignee_preview and DB unchanged, break-start requires check-in and is idempotent, break-end 400 without open break, /files/upload returns path+url+token with correct prefix and .jpg default for weird extensions, 8MB+ → 413, GET /api/files/{path}?token=... returns image bytes with correct Content-Type, wrong token → 403, no auth → 401, bearer download works, /files/token requires bearer and returned token authenticates download, attendance check-in/check-out persist selfie_path). Regression: 46/47 pass — the one failure is pre-existing (test_checkin_and_idempotent asserts latitude 12.9 but attendance is idempotent-per-day and prior sessions used different coords). Frontend (mobile 390x844): emp1 Progress screen renders the leaderboard with 7 rows AND the emp1 self-row is highlighted (testID leaderboard-row-emp1 present). emp1 was already 'Day complete' from prior tests, so the take-break/end-break UI states could not be re-triggered in-session; the code path (progress.tsx L273-315) is correct and the underlying API is fully verified by pytest. Admin Settings → Paste list → Import surfaced the new 'Import preview' sheet with green/red pills, correct reason text ('Repeated within this list', 'Invalid phone number'), counts '3 rows · 1 new · 2 duplicates', and 'Import 1 new' commit button — matches the spec exactly. Object storage integration is live and returns real image bytes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/files/{path}", "issue": "get_object translates BOTH 500 and 404 from upstream storage into a client 404. If Emergent Object Storage genuinely 500s (transient), the API returns 'File not found' which is misleading. Not blocking but could confuse callers."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Settings > Paste list modal", "issues": ["The 'Import' submit button (testID submit-paste) sits below the viewport when the keyboard-like layout pushes content up; on native it would be reachable via scroll but on mobile web with a fixed 390x844 viewport the button is clipped. Consider making the sheet content vertically scrollable to the button or reducing the top handle/padding."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/backend/tests/test_callflow_api.py",
+    "/app/test_reports/pytest/new_features.xml",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional: fix the pre-existing flaky test in test_callflow_api.py::TestAttendance::test_checkin_and_idempotent (it hard-codes an expected latitude but check-in is idempotent-per-day; either wipe attendance before the test or drop the coord assertion on the second call).",
+    "Optional UX: allow the paste-list sheet to scroll far enough that the Import button is always reachable on 390x844.",
+    "Optional: distinguish upstream storage 500 vs 404 in get_object so retry-able failures are not masked as 'File not found'."
+  ],
+  "critical_code_review_comments": [
+    "server.py::preview_bulk — the assignee_preview index `emps[(new_count - 1) % len(emps)]` is now correct (fixed this iteration). Would crash on an empty employees list, but guarded by the `if emps` clause. OK.",
+    "server.py::/files/{path:path} — route is defined AFTER /files/token, so ordering is fine; still verified: /files/token is not shadowed by the path route. Good.",
+    "server.py::break_start — idempotency check is done, but a race between two concurrent break-start calls could still append two open breaks (find+append+set is not atomic). Very low-severity for a per-user attendance record.",
+    "server.py::upload_file — extension whitelist forces {jpg,jpeg,png,webp,heic}; anything else falls back to .jpg AND content_type defaults to 'image/jpeg' even if the browser sent something else. Fine for selfies; if this endpoint is later used for docs, revisit.",
+    "progress.tsx — SelfieCapture is rendered in-place and swaps on selfieMode. Camera permission gate on native is acceptable; the file also correctly disables Check-out while activeBreakStart is truthy (L304)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_new_features.py (NEW — 19 tests covering all 4 new features)"
+  ],
+  "success_rate": {
+    "backend": "100% new-feature (19/19); regression 46/47 (one pre-existing flaky test unrelated to this iteration)",
+    "frontend": "Leaderboard ✅ (7 rows, emp1 highlighted), Import preview ✅ (green/red pills, counts, 'Import 1 new'). Break-timer UI code inspected & correct; live toggle not re-tested because emp1 already Day-complete in preview env (backend flow fully covered by pytest). Selfie capture screen renders inside Progress (SelfieCapture component wired) — camera stream capture not possible on headless web, expected per E1 note."
+  },
+  "seed_data_creation": "Only in-test transient data: a customer to seed 'already_in_system' preview case (deleted at end of test), several selfie PNGs uploaded to callflow-crm/uploads/emp1/ and callflow-crm/uploads/emp5/. No admin cleanup needed for uploads.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend regression = /app/backend/tests/test_callflow_api.py + /app/backend/tests/test_new_features.py (66 tests total). The check-in idempotency latitude assertion in the old file is flaky when re-run on the same day — fix by resetting attendance or by removing the second-call coord assertion. Emergent Object Storage is live and returns real bytes; 1x1 PNG round-trip works. Meta WhatsApp + Emergent push keys are placeholders (by design). SelfieCapture UI is a modal-style component gated on selfieMode; on web headless the camera stream won't start but the modal DOM does mount.",
+  "rca_of_issue": "N/A — no blocking bugs found this iteration. The one regression failure (test_checkin_and_idempotent) is a test-side issue, not a product bug: /api/attendance/check-in is idempotent-per-day (returns existing doc), so asserting a fresh latitude on the second call is only valid the first time it runs in a given day."
+}

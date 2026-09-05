@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 15 (Daybook now returns Money Receipts + Invoices sections, with linked_receipts on due_collection / daily_sales / invoices entries) tested end-to-end at the backend layer. 14/14 pytest tests PASSED (1 intentionally skipped — see notes). Verified: (a) GET /api/daybook?date=YYYY-MM-DD returns the 4 sections due_collection/daily_sales/receipts/invoices + grand_total; (b) receipts.entries carry display_name & pdf_token; (c) invoices.entries carry display_name & pdf_token & linked_receipts; (d) each collection entry in daybook has linked_receipts populated for receipts with source_type='collection' & source_id=<col.id>; (e) each daily_sales entry has linked_receipts field; (f) each invoice entry has linked_receipts field; (g) GET /api/collections listing now attaches linked_receipts per entry; (h) any authenticated employee (emp1) — not just admin — can POST /api/receipts with source_type='collection' and source_id=<collection.id> (returns 200 with resolved source_label & pdf_token); (i) grand_total math correct — the linked 800-cash receipt is NOT double-counted on top of the collection, and only source_type='other' receipts add to the grand total (spec scenario: daily_sale 1000 cash + 500 online, collection 2000 cash, linked-to-collection receipt 800 cash, standalone 'other' receipt 300 cash → grand_total residual over sales+collections equals only the 'other' contribution). All test data prefixed TEST_it15 and cleaned up via module-scope fixture (verified 0 residual receipts).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration15_daybook_receipts_invoices.py",
+    "/app/test_reports/pytest/iteration15.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py daybook endpoint (line 1686) iterates rc_docs three separate times to build receipts_by_src / ds_receipts_by_user / inv_receipts_by_src / other_rc totals — could be consolidated into a single pass for perf, but functionally correct.",
+    "Grand-total definition: daybook adds only source_type='other' receipts on top of sales+collections. This is correct per the spec (avoids double counting), but source_type='sale' and source_type='invoice' receipts also flow through as 'informational only'. If a receipt were raised with source_type='sale' but the sale row was NOT part of daily_sales for the day, its cash would be silently omitted from grand_total. Not a bug for the current spec but worth documenting.",
+    "server.py is now 2779 lines — still growing; splitting invoices/receipts/daybook into modules recommended (already flagged in iter14).",
+    "POST /api/receipts allows amount == 0 (validator only rejects < 0). Frontend requires > 0; align if 0-amount receipts should not be allowed (carried over from iter14)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration15_daybook_receipts_invoices.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 passed, 1 skipped by design)",
+    "frontend": "not tested (backend-only iteration per review request)"
+  },
+  "seed_data_creation": "During tests, created 1 daily-sale, 1 collection, up to 4 money receipts and 0 invoices (all prefixed TEST_it15). All were deleted via module-scope teardown fixture; verified via admin /api/receipts listing that 0 TEST_it15 receipts remain. No invoice teardown was exercised since the test did not create invoices — invoice section shape was still validated on whatever invoices already existed for the day (may be zero, which is fine).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run with: `EXPO_PUBLIC_BACKEND_URL=$(grep EXPO_PUBLIC_BACKEND_URL /app/frontend/.env | cut -d= -f2) pytest backend/tests/test_iteration15_daybook_receipts_invoices.py -v -o addopts=''` (pytest.ini in /app/backend uses xdist by default; -o addopts='' disables it so class-level state survives across ordered tests). Note that /api/receipts always stamps today_key() server-side, so any daybook test using linked receipts must use today's date_key for daily_sales & collections (this test uses dt.date.today().isoformat()). The 'test_grand_total_isolated_day' is intentionally skipped for the same reason. Frontend was NOT tested per the review request (backend-only).",
+  "rca_of_issue": "N/A — all specified behaviors verified working. The daybook response correctly exposes 4 sections, linked_receipts arrays on every entry type (collections/daily_sales/invoices), and grand_total math is correct (linked receipts are NOT double-counted, only source_type='other' receipts add on top of sales+collections). Employee (non-admin) receipt creation against a collection returns 200."
+}

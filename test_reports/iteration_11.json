@@ -1,0 +1,29 @@
+{
+  "summary": "Verified iteration 10 fix for GET /api/collections/summary user-scoping. The previously failing test TestCascadeAndDelete::test_summary_scope_non_admin (non-admin emp3 should see totals=0 because scope is filtered to their own username) now PASSES. Ran targeted test + full test_iteration10_collections.py suite (20/21 passed). Verified backend code at server.py:1433-1435 correctly applies q['user'] = u['username'] when role != admin.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "N/A - test infra", "issue": "TestCascadeAndDelete::test_rename_collector_cascades is flaky under parallel xdist scheduling due to cross-worker state pollution around the emp7->emp7test rename/delete/recreate sequence. Passes standalone. Not related to summary scoping fix. Consider marking with @pytest.mark.serial or moving to a dedicated worker."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration10_collections.py",
+    "/app/test_reports/pytest/iteration11.xml",
+    "/app/test_reports/pytest/iteration11_full.xml"
+  ],
+  "action_items": [
+    "Fix confirmed working; no action required for the reported bug.",
+    "(Optional) Harden test_rename_collector_cascades against parallel execution to eliminate pre-existing flakiness."
+  ],
+  "critical_code_review_comments": [
+    "server.py:1426-1455 collections_summary correctly scopes non-admin users via q['user'] = u['username']; admin sees workspace-wide totals. Aggregation logic and date filling are correct."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "95% (20/21 tests; single unrelated flaky test)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "None. Test-created entries prefixed TEST_ cleaned up by module fixture. emp7 user state restored post-run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The user-scoping fix in GET /api/collections/summary is verified. Test test_summary_scope_non_admin passes both in parallel and standalone. The one failing test (test_rename_collector_cascades) is a pre-existing flakiness in parallel xdist mode unrelated to this fix.",
+  "rca_of_issue": "Root cause of the original bug: /api/collections/summary was not filtering the aggregation query by user for non-admin roles, so employees saw workspace-wide totals. Fix at backend/server.py:1434-1435 adds `if u['role'] != 'admin': q['user'] = u['username']` — this mirrors the scoping applied on GET /api/collections list endpoint. Verified: emp3 (non-collector, no entries) now sees totals.total == 0 while admin sees all entries."
+}

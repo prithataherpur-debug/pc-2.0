@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 12 verified end-to-end. Backend: 17/17 pytest cases pass in /app/backend/tests/test_iteration12_admin_sales_and_workspace_collections.py — GET /api/collections and /api/collections/summary now return workspace-wide data for any authenticated user (emp3 sees emp2's entries and identical totals to admin); write paths remain properly gated (POST → collector-or-admin, PATCH → owner-or-admin, DELETE → admin-only). PATCH /api/sales/{sid} accepts amount+product+notes+purchase_amount together for admin (profit recomputed = 1500-900=600); owner gets 403 when passing purchase_amount; non-owner non-admin gets 403 on any patch; admin can DELETE any sale, non-admin cannot. Frontend (mobile viewport 390x844): (a) More tab 'row-collections' visible for both admin and emp3; label 'Due collection' (no '(assigned to you)' suffix for emp3 since no collector set). (b) /sales as admin shows 11 edit-sale pencils; sheet title 'Edit sale', byline '· by <name>', all four fields (own-amount, own-product, own-purchase [admin-only], own-notes) and Save changes + Delete this sale buttons rendered. (c) /collections as emp3: add-collection button hidden, 'Only the assigned collector can add entries.' notice shown, 3 workspace-wide entries visible from other users, Total summary pill visible. (d) /sales as emp3: pencil only on own row, sheet title 'Edit my sale', no own-purchase input, no delete-sale button.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration12_admin_sales_and_workspace_collections.py",
+    "/app/test_reports/pytest/iteration12.xml"
+  ],
+  "action_items": [
+    "(Optional cleanup) /app/frontend/app/(tabs)/more.tsx computes an unused `showCollections` variable (line 23). The Row is always rendered as intended by the new spec, so the variable is dead code — safe to remove.",
+    "(Info) test_iteration10_collections.py still contains two tests written against the OLD user-scoped behavior (TestListing::test_non_admin_sees_only_own and TestCascadeAndDelete::test_summary_scope_non_admin). They will conflict with the new workspace-wide semantics on any future run; either delete them or invert their assertions to match the new spec."
+  ],
+  "critical_code_review_comments": [
+    "backend/server.py:1352-1382 list_collections is now workspace-wide (no user filter); attaches display_name via name_cache — good.",
+    "backend/server.py:1424-1451 collections_summary aggregates without user filter for all roles — matches spec.",
+    "backend/server.py:1671-1704 patch_sale correctly branches: is_admin gate for purchase_amount (403), owner/admin allowed to edit amount/product/notes; sale_from_doc recomputes profit from stored purchase_amount.",
+    "frontend/app/sales.tsx correctly hides own-purchase input and delete-sale button for non-admins; edit-sale pencil is gated by (canEditOwn || isAdmin)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% (all 4 flows verified)"},
+  "seed_data_creation": "One temporary emp3 sale (TEST_it12_uicheck, id 5f982a63-...) was created via API for emp3 edit-sheet UI verification and DELETED after the test. Backend pytest fixtures self-clean all TEST_ prefixed collections and sales and reset the collector to None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The two iteration_10 legacy tests (test_non_admin_sees_only_own, test_summary_scope_non_admin) still assume user-scoped visibility and will fail against the current backend. Not addressed here to stay within fix-scope; main agent should decide whether to delete or update them. All iteration_12 assertions live in test_iteration12_admin_sales_and_workspace_collections.py.",
+  "rca_of_issue": "N/A — feature verification pass, no bugs surfaced."
+}

@@ -1,0 +1,15 @@
+{
+  "summary": "Re-ran /app/backend/tests/test_iteration8_perms_drilldown.py after 1-line fix in admin_user_sales (server.py:772 now returns [sale_from_doc(d) for d in docs]). All 23 tests pass in 5.88s. Profit computation for GET /api/admin/users/{username}/sales now correctly returns 600.0 for amount=1500 & purchase_amount=900, and gracefully returns 0 when purchase_amount is absent (verified by TestAdminUserSales::test_returns_sale_shape and TestAdminUserSales::test_unknown_username_404).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": ["/app/backend/tests/test_iteration8_perms_drilldown.py", "/app/test_reports/pytest/pytest_iter9.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (23/23)", "frontend": "N/A"},
+  "seed_data_creation": "None - tests self-manage seed data via /api/admin/seed and cleanup",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend tests require env var EXPO_PUBLIC_BACKEND_URL set to public URL from /app/frontend/.env before running pytest. Fix in server.py admin_user_sales is verified end-to-end.",
+  "rca_of_issue": "Previous iteration returned raw docs from Mongo without passing through sale_from_doc, so the computed 'profit' field (amount - purchase_amount) was missing and defaulted to 0. Fix maps each doc through sale_from_doc which computes profit correctly."
+}

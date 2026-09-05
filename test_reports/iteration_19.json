@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 20 backend regression + feature testing complete. 12/12 pytest tests PASSED. Verified the invoice-no-longer-creates-sale bug fix and the new cash+online split fields on both invoices and sales. Confirmed: (1) POST /api/invoices does NOT create a sale record — sales count for the acting user is unchanged after invoice creation and response.sale_id is null; (2) GET /api/sales does not leak invoice items as sales; (3) invoice explicit split cash=3000/online=2000 for a ₹5000 invoice returns payment_mode='mixed' with correct amounts; (4) default (no split) returns cash=total, online=0, payment_mode='cash' (backward-compat OK); (5) mismatch (cash 2000 + online 2000 for total 5000) correctly returns 400; (6) cash-only and online-only splits return payment_mode='cash' and 'online' respectively; (7) GET /api/invoices returns cash_amount, online_amount, payment_mode and linked_receipts array populated for attached advance receipts; (8) Customer ledger for 1 manual sale ₹1000 + 1 invoice ₹2000 + 1 receipt ₹500 yields total_billed_manual=1000, total_invoices=2000, total_received=500, due_balance=2500 exactly and timeline lists sale + invoice as separate rows; (9) POST /api/sales split (cash=1000/online=500 for ₹1500) returns payment_mode='mixed'; (10) POST /api/sales without split defaults to payment_mode='cash'; (11) attach_receipt_ids still relinks same-customer advance receipts (source_type='invoice', source_id=inv_id, reference_no=invoice_no). No regressions detected in iteration-19 flows.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration20_invoice_no_sale_split.py",
+    "/app/test_reports/pytest/iteration20.xml"
+  ],
+  "action_items": [
+    "None — bug fix and split feature both verified end-to-end. Main agent can proceed to frontend wiring (invoice creation UI should now expose cash/online split inputs).",
+    "Consider adding a similar split UI hook on the Sales create screen since backend now supports cash_amount/online_amount on POST /api/sales too."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 3399 lines — well past the 700-line guideline. Recommend splitting into modules (sales, invoices, receipts, ledger, auth) in a future refactor.",
+    "Invoice payment-split validation is duplicated inline in create_invoice (lines 2610-2630) while sales use the shared _split_payment() helper. Recommend extracting invoice split logic into _split_payment for a single source of truth — currently the two paths could drift.",
+    "customer_ledger keeps a 'total_billed_no_inv_dup' filter (source != 'invoice') to defend against legacy auto-created invoice-sales. This is defensive but obsolete for new data; leave as-is for backwards compat but call it out in a comment or migration plan.",
+    "create_invoice still writes 'sale_id': None into the invoice document. Fine, but the field could be removed from the model in a future cleanup since invoices are now fully independent of sales."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration20_invoice_no_sale_split.py (new — 12 pytest cases, autouse cleanup)"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "n/a (backend-only request)"},
+  "seed_data_creation": "All test data phone-prefixed with '91TEST20'; receipts / invoices / sales / customers cleaned up in module-scoped teardown fixture. No production/seeded data touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 20 bug fix (invoice-no-sale) + cash/online split on invoices and sales are green. If future iterations touch payment mode handling, extend TestInvoiceSplit / TestSalesSplit for edge cases (negative amounts, decimals, currency changes). Ledger due_balance formula is now: manual_sales + invoices - receipts (auto-invoice-sales excluded via source='invoice' filter for legacy safety).",
+  "rca_of_issue": "No new bug found this iteration. Prior bug (invoice auto-creating a duplicate sale doc) was reported by user; E1's fix in create_invoice (server.py L2652-2673) removed the sale insert and sets sale_id=None. Regression tests confirm the sale collection is untouched by invoice creation and GET /api/sales never surfaces invoice items."
+}

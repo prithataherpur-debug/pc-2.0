@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 6 — verified the keyboard-controller fix for the 'Log sale can't enter from mobile' bug. Fix implementation confirmed correct in code: (a) root /app/frontend/app/_layout.tsx wraps the tree in <KeyboardProvider> from react-native-keyboard-controller (v1.18.5 installed in package.json) inside GestureHandlerRootView; (b) /app/frontend/src/components/PunchSaleModal.tsx and the EditEmployeeModal inside /app/frontend/app/team.tsx both replaced the old ScrollView/KeyboardAvoidingView with <KeyboardAwareScrollView keyboardShouldPersistTaps='handled' bottomOffset={24} contentContainerStyle={{paddingBottom: theme.space.xl}}>; (c) returnKeyType='done' added to sale-amount, sale-product, edit-display-name, edit-daily-goal, edit-password. Mobile smoke (Chromium 390x844): PunchSaleModal opened from Progress screen — 'Log sale' button sits at y=735, height=52 (bottom edge 787) fully inside the 844 viewport BEFORE and AFTER focusing/filling every input (amount, product, notes) in both 'Existing' and 'New customer' modes. Both submissions succeeded: existing-mode POST /api/sales returned 200 and modal auto-closed, leaderboard for emp1 updated from 1 sale/₹1,235 → 2 sales/₹2,499; new-mode created customer + sale in one submit, modal closed, leaderboard row incremented. Team edit modal (admin → /team → tap emp1): 'Save changes' at y=679/height=52 fully in-viewport before + after focusing Display name / Daily call goal / New password; PATCH /api/admin/users/emp1 {daily_goal:88} succeeded (row re-rendered to '2 / 88 CALLS · custom goal'); reset link ('Reset to default') restored it back to 50. Backend regression: 89/89 pytest passing across test_iteration5.py (25), test_callflow_api.py + test_new_features.py + test_iteration4.py (64) — no endpoint drift. No red screens, no navigation crashes, no console errors during modal flows. The bug is fixed on both target modals.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration5.py",
+    "/app/backend/tests/test_callflow_api.py",
+    "/app/backend/tests/test_new_features.py",
+    "/app/backend/tests/test_iteration4.py",
+    "/app/test_reports/pytest/iteration5.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "_layout.tsx (L124-134) — <KeyboardProvider> is correctly placed OUTSIDE SafeAreaProvider and AuthProvider so its context is available to every screen/modal without re-mounting. Good.",
+    "PunchSaleModal.tsx (L128-133) — KeyboardAwareScrollView with bottomOffset=24 + paddingBottom xl gives the submit button enough clearance above the soft keyboard on real devices. keyboardShouldPersistTaps='handled' correctly lets the user tap 'Log sale' without dismissing focus first. Good.",
+    "team.tsx::EditEmployeeModal (L310-315) — identical KeyboardAwareScrollView pattern; the Save/Cancel buttons live inside the scrollable content, so they're pushed above the keyboard rather than fixed to the bottom of the sheet. Good.",
+    "PunchSaleModal + team.tsx — outer <Pressable style={styles.sheet}> around the KeyboardAwareScrollView is fine on web/native, but note the sheet still has maxHeight:'90%'; if any future TextInput adds a huge multiline, the internal scroll will handle it (verified with the 'Notes' field). No action needed.",
+    "returnKeyType='done' — applied to numeric/short inputs (amount, product, display name, daily-goal, password). Multi-line 'notes' correctly left without it. Good."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (89/89) — no regression",
+    "frontend": "100% for the two target flows (Punch Sale in Existing+New modes, Team edit modal) at 390x844"
+  },
+  "seed_data_creation": "During UI smoke test: created 1 sale (Existing/no customer, amount 999) + 1 customer 'TEST_KB_User' (+91 9911112222) + 1 sale on that customer (₹1,500). All 3 rows DELETED after the test via db.sales.delete_many + db.customers.delete_many. emp1 daily_goal set to 88 then reset to default (50) via the modal's 'Reset to default' link — no residual state.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Fix is stable. Web preview cannot show the native soft keyboard, so the 'button hidden behind keyboard' scenario can only be validated by (a) code review of KeyboardProvider + KeyboardAwareScrollView, and (b) confirming submit button y+height stays inside the 844px viewport during focus — both verified here. On a physical device, tester should verify the same on iOS + Android; if the button ever hides again, first check that <KeyboardProvider> is still the outermost provider under GestureHandlerRootView in app/_layout.tsx.",
+  "rca_of_issue": "Original bug: PunchSaleModal used a plain ScrollView + KeyboardAvoidingView; on Android especially, the KAV 'padding' behavior does not reliably lift the submit button when the sheet is presented from a react-native Modal (Modal creates a new window that KAV cannot measure against, so the 'Log sale' button stayed pinned behind the software keyboard). Fix: swapped in react-native-keyboard-controller's KeyboardAwareScrollView which uses native RCTKeyboardControllerModule to observe keyboard frame changes globally (via KeyboardProvider at root) and scrolls the currently-focused input + trailing offset (bottomOffset=24) into view regardless of the containing Modal. Same pattern applied to EditEmployeeModal so 'Save changes' now scrolls above the keyboard too."
+}

@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 19 backend testing complete. 17/17 pytest tests passed after fixing one critical route-ordering bug in /app/backend/server.py where GET /receipts/advances was shadowed by GET /receipts/{rid}, always returning 404. Moved the /receipts/advances handler ahead of /receipts/{rid} and re-verified. All reference_no auto-derivation paths (invoice, sale-with-invoice, sale-without-invoice, collection, other/advance) and explicit override work correctly. Advance listing filters correctly by phone / customer_id and rejects missing params with 400. PATCH /receipts/{id} is admin-only (403 for employee) and auto-derives reference_no on source change. POST /invoices attach_receipt_ids correctly links same-customer advances, silently skips different-customer receipts, non-'other' source_type receipts, and receipts with an existing reference_no. Test data (receipts, invoices, auto-created sales, TEST19 customers) cleaned up in teardown.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/receipts/advances",
+        "issue": "Route was declared AFTER GET /api/receipts/{rid} in server.py so FastAPI matched the path-param route first and returned 404 'Not found' for every call. Fixed by moving the /receipts/advances handler above /receipts/{rid}. Reference: /app/backend/server.py around line 2903 (new position) — original duplicate at ~line 2961 replaced with hidden legacy stub.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration19_reference_no_advances.py",
+    "/app/test_reports/pytest/iteration19.xml"
+  ],
+  "action_items": [
+    "Frontend note: any UI screens that previously called /api/receipts/advances would have been broken by the route-ordering bug — please have E1 verify the mobile receipt/advance selector screen now shows advances after this fix.",
+    "Consider deleting the placeholder stub route '/receipts/advances-legacy-removed' in server.py once E1 does a cleanup pass; it exists only to preserve the original code block position without duplicating the handler."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 3292 lines — well past the 700-line guideline. Recommend splitting into modules (receipts, invoices, sales, collections, auth, etc.).",
+    "list_advance_receipts endpoint originally suffered a classic FastAPI route-ordering pitfall; add a note or a lint rule to catch specific paths declared after {param} paths on the same prefix.",
+    "attach_receipt_ids handling in create_invoice silently skips invalid receipts (different customer, non-advance) — this matches the spec but a debug log line would help admins understand why an attached receipt didn't get linked."
+  ],
+  "updated_files": [
+    "/app/backend/server.py (moved /receipts/advances route before /receipts/{rid}; replaced original block with hidden legacy stub)",
+    "/app/backend/tests/test_iteration19_reference_no_advances.py (new pytest suite, 17 tests, autouse cleanup fixture)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "n/a (backend-only request)"},
+  "seed_data_creation": "Test data uses phone prefix '91TEST19'; receipts / invoices / auto-created sales / customers created during tests are all deleted in the module-scoped teardown fixture.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 19 reference-no + advance-attach flow is green. If E1 refactors server.py, be careful to preserve route-ordering: specific paths (/receipts/advances) must be declared before path-parameter routes (/receipts/{rid}).",
+  "rca_of_issue": "RCA — GET /api/receipts/advances 404: FastAPI matches routes in the order they are added to the router. get_receipt (GET /receipts/{rid}) was registered at line 2904 while list_advance_receipts (GET /receipts/advances) was registered at line 2961. Any request to /receipts/advances first hit /receipts/{rid} with rid='advances', which then failed the db.receipts.find_one lookup and returned HTTPException(404, 'Not found'). Reproduction: `curl -H 'Authorization: Bearer <token>' '$BACKEND_URL/api/receipts/advances?phone=91xxxxxxxxxx'` → 404 before fix, 200 with `{advances,count,total_amount}` after fix. Mitigation applied: moved list_advance_receipts_early above get_receipt in server.py."
+}

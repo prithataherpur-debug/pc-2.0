@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 10 — Due Collection module (Phase 1) tested end-to-end. Backend: 20/21 tests pass (1 legitimate bug found in /api/collections/summary — it does NOT scope by user for non-admin, spec violation). Frontend flows all work: admin picker with 7 employees, live cash/grand totals, denomination chips (500×5, 100×2), toast on assign, admin-only reassign button, employee-collector can add, non-collector emp3 sees notice and no New button, More tab correctly hides Due-collection row for non-collector employees. cascade_rename_user correctly migrates db.collections.user + settings.collector_username, and delete-employee clears collector when the deleted employee was assigned.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/collections/summary",
+        "issue": "Does NOT scope by caller — non-admin users see aggregated totals from ALL collections (including the collector's entries). Spec explicitly says 'for the caller's scope (admin=all)'. As emp3 (non-collector, no entries), the endpoint returns non-zero totals reflecting emp2's data. Fix: add `if u['role'] != 'admin': q['user'] = u['username']` before the find() at server.py:1433.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration10_collections.py",
+    "/app/test_reports/pytest/iteration10.xml"
+  ],
+  "action_items": [
+    "Fix /api/collections/summary to filter by user for non-admin callers (server.py near line 1433). Otherwise Phase-2 invoice/PDF flows built on top of summary numbers will leak collector totals to every employee.",
+    "(Optional cosmetic) In collections.tsx breakdown chip, the online-total chip label sometimes renders truncated in the small chip width — verify visually whether '₹500' fully shows on 390-wide screens; not blocking."
+  ],
+  "critical_code_review_comments": [
+    "server.py:1426 collections_summary lacks per-user scope filter — see backend_issues.critical.",
+    "server.py:1284 DENOMS is a module-level constant which is fine, but the same value is also hardcoded in frontend api.ts (DENOMS = [500,200,100,50,20,10]). Consider serving denominations from a small GET /api/collections/denoms endpoint to keep them single-sourced.",
+    "server.py cascade_rename_user (line 543) — good coverage; renames db.collections.user and settings.collector_username as required. Confirmed by TestCascadeAndDelete::test_rename_collector_cascades.",
+    "server.py delete-user path (line 678) — 'await db.settings.update_one({\"id\": \"app\", \"collector_username\": username}, {\"$unset\": {\"collector_username\": \"\"}})' correctly clears collector when assigned employee is deleted."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration10_collections.py (new)"
+  ],
+  "success_rate": {
+    "backend": "95% (20/21 — the single failure is a real backend bug documented above)",
+    "frontend": "100% (admin flow, collector-employee flow, non-collector employee flow, More tab visibility all verified)"
+  },
+  "seed_data_creation": "Test creates its own collection entries (all with notes starting 'TEST_') and clears the collector at start & end. Cleanup verified — 0 entries remain, collector cleared, all 8 seeded users intact after run.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend tests need env EXPO_PUBLIC_BACKEND_URL. Run parallel with default addopts (xdist load-scope). The rename cascade test renames emp7 → emp7test → deletes → recreates emp7. If a run is interrupted, verify all 8 seeded users still exist via GET /api/admin/users, otherwise re-create emp7 with POST /api/admin/users {username: emp7, password: Emp@2026, display_name: 'Emp 7'}. Also always clear collector at teardown (PUT /api/admin/collector {username: null}). The lone remaining failure test_summary_scope_non_admin is a real backend bug — do NOT modify the assertion; wait for main agent to add per-user scoping to collections_summary().",
+  "rca_of_issue": "collections_summary endpoint (server.py line 1426-1452) builds a Mongo query `{\"date_key\": {\"$gte\": start}}` without adding `{\"user\": u['username']}` for non-admin callers. Every authenticated user (regardless of role) therefore sees system-wide aggregate totals. Reproduction: 1) Admin assigns emp2 as collector; 2) emp2 POSTs a collection with cash 500, online 500; 3) Login as emp3 (non-collector, no entries); 4) GET /api/collections/summary?days=7 returns totals.total = 1000 instead of 0. Fix: insert `q: dict = {'date_key': {'$gte': start}}; if u['role'] != 'admin': q['user'] = u['username']` and pass q to find(). The list_collections endpoint (line 1352) already implements this scoping correctly — mirror the same pattern in summary."
+}
