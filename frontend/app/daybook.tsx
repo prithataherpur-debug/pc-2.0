@@ -246,7 +246,7 @@ export default function DaybookScreen() {
               <TCTile icon="receipt-outline" label="Money receipts" value={fmt(data.total_collection.money_receipts)} />
             </View>
             <Text style={styles.tcHint}>
-              Grand total = sales + invoices + due collection + standalone receipts. Receipts linked to a sale, invoice or collection listed today are informational only.
+              Grand total = sales + invoices + due collection + standalone receipts. A sale or invoice is counted only once a money receipt has been generated against it — un-receipted sales/invoices show a &quot;Not counted&quot; tag and are excluded from the cash totals.
             </Text>
           </View>
         ) : null}
@@ -590,6 +590,12 @@ function SaleRow({ sale }: { sale: Sale }) {
             <View style={[styles.modePill, { backgroundColor: modeColor + "22", borderColor: modeColor + "55" }]}>
               <Text style={[styles.modePillText, { color: modeColor }]}>{(sale.payment_mode || "cash").toUpperCase()}</Text>
             </View>
+            {linked.length === 0 ? (
+              <View style={styles.notCountedPill} testID={`sale-not-counted-${sale.id}`}>
+                <Ionicons name="alert-circle-outline" size={9} color={theme.color.muted} />
+                <Text style={styles.notCountedText}>NOT COUNTED</Text>
+              </View>
+            ) : null}
           </View>
           {sale.product ? <Text style={styles.entryNotes} numberOfLines={1}>{sale.product}</Text> : null}
           <Text style={styles.rcpSourceText} numberOfLines={1}>by {sale.display_name || sale.user}</Text>
@@ -640,7 +646,15 @@ function InvoiceRow({ invoice }: { invoice: Invoice }) {
     <View style={styles.entry} testID={`inv-${invoice.id}`}>
       <View style={styles.entryTop}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.entryName}>{invoice.invoice_no}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={styles.entryName}>{invoice.invoice_no}</Text>
+            {linked.length === 0 ? (
+              <View style={styles.notCountedPill} testID={`inv-not-counted-${invoice.id}`}>
+                <Ionicons name="alert-circle-outline" size={9} color={theme.color.muted} />
+                <Text style={styles.notCountedText}>NOT COUNTED</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.entryNotes} numberOfLines={1}>
             {invoice.customer_name}{invoice.customer_mobile ? " · " + invoice.customer_mobile : ""}
           </Text>
@@ -979,6 +993,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   modePillText: { fontSize: 8, fontWeight: "800", letterSpacing: 0.5 },
+  notCountedPill: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1, borderColor: theme.color.border,
+    backgroundColor: theme.color.surfaceTertiary,
+  },
+  notCountedText: { fontSize: 8, fontWeight: "800", letterSpacing: 0.5, color: theme.color.muted },
   rcpSourceRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
   rcpSourceText: { fontSize: 10, color: theme.color.muted, fontStyle: "italic", flex: 1 },
 

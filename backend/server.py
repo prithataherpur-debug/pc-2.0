@@ -2100,7 +2100,11 @@ async def _build_daybook(day: str) -> dict:
         iv["display_name"] = await _name(iv["user"])
         if iv.get("pdf_path"):
             iv["pdf_token"] = _make_media_token(iv["pdf_path"])
-        iv["linked_receipts"] = inv_receipts_by_src.get(iv["id"], [])
+        linked = inv_receipts_by_src.get(iv["id"], [])
+        iv["linked_receipts"] = linked
+        # Rule: an invoice's cash counts in the daybook ONLY if a money receipt
+        # has been generated against it. No receipt → not counted.
+        iv["counted"] = len(linked) > 0
         total = float(iv.get("total") or 0)
         c_amt = iv.get("cash_amount")
         o_amt = iv.get("online_amount")
@@ -2113,18 +2117,24 @@ async def _build_daybook(day: str) -> dict:
                 c_amt, o_amt = total, 0.0
             else:
                 c_amt, o_amt = total, 0.0
-        inv_total += total
-        inv_cash += float(c_amt or 0)
-        inv_online += float(o_amt or 0)
+        if iv["counted"]:
+            inv_total += total
+            inv_cash += float(c_amt or 0)
+            inv_online += float(o_amt or 0)
     inv_totals = {"cash": inv_cash, "online": inv_online, "total": inv_total}
 
     # Manual sales for the day (cash / online split is the money actually received at sale time)
     sale_cash = 0.0
     sale_online = 0.0
     for s in sale_docs:
-        s["linked_receipts"] = receipts_by_src.get(s["id"], [])
-        sale_cash += float(s.get("cash_amount") or 0)
-        sale_online += float(s.get("online_amount") or 0)
+        linked = receipts_by_src.get(s["id"], [])
+        s["linked_receipts"] = linked
+        # Rule: a sale's cash counts in the daybook ONLY if a money receipt has been
+        # generated against it. No receipt → not counted.
+        s["counted"] = len(linked) > 0
+        if s["counted"]:
+            sale_cash += float(s.get("cash_amount") or 0)
+            sale_online += float(s.get("online_amount") or 0)
     sale_totals = {"cash": sale_cash, "online": sale_online, "total": sale_cash + sale_online}
 
     # Standalone receipts = fresh money not already counted through a source listed on THIS day.

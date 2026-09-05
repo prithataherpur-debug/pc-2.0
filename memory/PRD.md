@@ -193,3 +193,9 @@ Multi-user sales-call CRM. 1 admin + 7 employees log in and work through their o
 - **Expo Go icon-font prewarm** (`src/hooks/use-icon-fonts.ts`) updated: under Expo Go (StoreClient) it loads the Ionicons `.ttf` from jsDelivr for `@react-native-vector-icons/ionicons@13.1.3` registered under family key `Ionicons` (the postScriptName the component renders with); native builds + web pass an empty map. Preserves the Android-Expo-Go workaround for 0-byte Metro font assets.
 - Verified: `expo-doctor` 20/20 passed, ESLint clean, web preview renders with all icons + navigation intact.
 - NOTE: users testing on **Expo Go** must use an Expo Go build that supports SDK 57.
+
+## Update — Daybook counts only receipted sales/invoices (Jun 2026, session 5)
+- Rule: a sale or invoice contributes to Daybook cash/online totals ONLY when a money receipt has been generated against it (same-day linked receipt). Un-receipted sales/invoices are excluded from sale_totals, inv_totals, grand_total and expected_cash.
+- Backend `_build_daybook`: each sale/invoice entry gets a `counted` flag (= has >=1 linked receipt); totals gated on it. Excel export uses the same function so exports match.
+- Frontend daybook: un-receipted sale/invoice rows show a grey "NOT COUNTED" badge; breakdown hint updated to explain the rule.
+- Verified end-to-end: a cash sale with no receipt => counted=false, sales total 0, not in grand/expected; after POST /api/receipts against it => counted=true, sales total + grand cash rise by the amount.
