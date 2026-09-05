@@ -1330,7 +1330,10 @@ async def list_customers(
     u=Depends(current_user),
 ):
     query: dict = {}
-    if u["role"] != "admin" or scope == "mine":
+    # Default list is scoped to the signed-in employee's own customers (their daily call
+    # list). But when a search term is provided, allow every employee to look up ANY
+    # customer across the workspace by name or phone.
+    if (u["role"] != "admin" or scope == "mine") and not search:
         query["assigned_to"] = u["username"]
     if status and status != "all":
         query["status"] = status
