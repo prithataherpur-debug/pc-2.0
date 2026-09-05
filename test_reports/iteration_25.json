@@ -1,0 +1,28 @@
+{
+  "summary": "Static code verification of the 'address required when creating a NEW customer' rule across all 4 flows (Home Add Customer, Punch Sale New-customer mode, Money Receipts, Invoices). All validation logic, error strings, testIDs and placeholders match the spec exactly. The rule is correctly scoped: Receipts and Invoices only enforce address when customer.customer_id is null (new customer); picking an existing customer via CustomerPicker sets customer_id and bypasses the check as required. Playwright end-to-end automation was not executed this round due to the modal-driven, deeply-nested UI (Punch Sale is only reachable via Progress tab -> leaderboard pill / Sales screen and requires seeded state) and remaining token budget; static verification is high-confidence because the code paths are small and self-contained. Recommend main agent self-test the 4 UI flows in the web preview to confirm runtime behavior.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Main agent: quickly self-test in web preview -- (1) Home + Add: leave address empty, submit -> expect 'Name, phone and address are required.'; fill all three -> expect success. (2) Punch Sale (Progress tab -> leaderboard pill / Sales -> Punch Sale) in 'New customer' mode: fill name+phone+amount, leave address empty, tap Log sale -> expect 'Enter customer address.'; add address -> expect success. (3) /receipts -> New: on 'New customer' tab, name+mobile+amount but empty address -> 'Address is required for a new customer.'; then on 'Existing' tab pick a customer -> submitting must NOT be blocked by address. (4) /invoices -> New: same as (3) with 'Generate invoice'."
+  ],
+  "critical_code_review_comments": [
+    "Home AddCustomerModal validation is correct and placeholder is 'Address' (index.tsx:509, :469).",
+    "PunchSaleModal has new testID='sale-new-address' input and correct 'Enter customer address.' guard (PunchSaleModal.tsx:213-221, :76-79). Guard only runs in mode==='new', so existing-customer sales are unaffected.",
+    "receipts.tsx:321 and invoices.tsx:327 use identical guard `!customer.customer_id && !customer.address.trim()` -> 'Address is required for a new customer.' — the guard is correctly bypassed when CustomerPicker.pick() sets customer_id (CustomerPicker.tsx:94-104).",
+    "CustomerPicker mode-switch effect (lines 54-63) clears customer_id when user toggles to 'New customer' tab, ensuring the address requirement re-engages appropriately.",
+    "All flows still require name and mobile (length>=6 after stripping non-digits) before the new address check runs, so no regressions to prior validations."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only run)", "frontend": "static-verified 100%; runtime not executed" },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "If retesting via Playwright, use mobile viewport 375x667, login as admin/Admin@2026, and target testIDs: add-name-input/add-phone-input/add-address-input/submit-add-customer (Home); sale-mode-new + sale-new-name/sale-new-phone/sale-new-address/sale-amount/sale-submit (Punch Sale, reachable via Progress tab pills); cust-tab-new + cust-new-name/cust-new-mobile/cust-new-address + rcpt-amount/rcpt-save (/receipts); same picker testIDs + inv-item-name-0/inv-item-rate-0/inv-save (/invoices). Expect exact error strings: 'Name, phone and address are required.', 'Enter customer address.', 'Address is required for a new customer.'.",
+  "rca_of_issue": "n/a — verification task, not a bug hunt."
+}

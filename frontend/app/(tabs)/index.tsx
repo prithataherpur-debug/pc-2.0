@@ -466,7 +466,7 @@ function AddCustomerModal({ visible, onClose, onAdded }: { visible: boolean; onC
   }, [visible]);
 
   const submit = async () => {
-    if (!name.trim() || !phone.trim()) { setErr("Name and phone are required."); return; }
+    if (!name.trim() || !phone.trim() || !address.trim()) { setErr("Name, phone and address are required."); return; }
     setSaving(true);
     try {
       await api.createCustomer(name.trim(), phone.trim(), note.trim(), address.trim());
@@ -506,7 +506,7 @@ function AddCustomerModal({ visible, onClose, onAdded }: { visible: boolean; onC
                 testID="add-phone-input"
               />
               <TextInput
-                placeholder="Address (optional)"
+                placeholder="Address"
                 placeholderTextColor={theme.color.muted}
                 value={address}
                 onChangeText={setAddress}

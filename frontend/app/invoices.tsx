@@ -324,6 +324,7 @@ function InvoiceEditor({
   const submit = async () => {
     if (!customer.name.trim()) { setErr("Customer name is required."); return; }
     if (!customer.mobile.trim() || customer.mobile.replace(/\D/g, "").length < 6) { setErr("Enter a valid mobile number."); return; }
+    if (!customer.customer_id && !customer.address.trim()) { setErr("Address is required for a new customer."); return; }
     const cleanItems: { name: string; qty: number; unit_price: number }[] = [];
     for (const it of items) {
       const q = parseFloat(it.qty || "0") || 0;

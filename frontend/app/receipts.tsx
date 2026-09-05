@@ -317,6 +317,8 @@ function ReceiptEditor({
 
   const submit = async () => {
     if (!customer.name.trim()) { setErr("Customer name is required."); return; }
+    if (!customer.mobile.trim() || customer.mobile.replace(/\D/g, "").length < 6) { setErr("Enter a valid mobile number."); return; }
+    if (!customer.customer_id && !customer.address.trim()) { setErr("Address is required for a new customer."); return; }
     let n = parseFloat(amount);
     let cashN = 0;
     let onlineN = 0;

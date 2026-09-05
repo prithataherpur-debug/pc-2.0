@@ -21,6 +21,7 @@ export default function PunchSaleModal({ visible, onClose, onSaved, presetCustom
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [newAddress, setNewAddress] = useState("");
   const [dupCustomer, setDupCustomer] = useState<Customer | null>(null);
   const [amount, setAmount] = useState("");
   const [product, setProduct] = useState("");
@@ -34,6 +35,7 @@ export default function PunchSaleModal({ visible, onClose, onSaved, presetCustom
       setCustomer(presetCustomer || null);
       setNewName("");
       setNewPhone("");
+      setNewAddress("");
       setDupCustomer(null);
       setAmount("");
       setProduct("");
@@ -71,6 +73,10 @@ export default function PunchSaleModal({ visible, onClose, onSaved, presetCustom
         setErr("Enter a valid phone number.");
         return;
       }
+      if (!newAddress.trim()) {
+        setErr("Enter customer address.");
+        return;
+      }
     }
     setBusy(true);
     setDupCustomer(null);
@@ -80,7 +86,7 @@ export default function PunchSaleModal({ visible, onClose, onSaved, presetCustom
 
       if (mode === "new") {
         try {
-          const created = await api.createCustomer(newName.trim(), newPhone.trim(), notes.trim());
+          const created = await api.createCustomer(newName.trim(), newPhone.trim(), notes.trim(), newAddress.trim());
           customerId = created.id;
           customerName = created.name;
         } catch (e: any) {
@@ -203,6 +209,15 @@ export default function PunchSaleModal({ visible, onClose, onSaved, presetCustom
                   placeholderTextColor={theme.color.muted}
                   style={styles.input}
                   testID="sale-new-phone"
+                />
+                <TextInput
+                  value={newAddress}
+                  onChangeText={setNewAddress}
+                  placeholder="Address"
+                  placeholderTextColor={theme.color.muted}
+                  multiline
+                  style={[styles.input, { minHeight: 56, textAlignVertical: "top" }]}
+                  testID="sale-new-address"
                 />
                 {dupCustomer ? (
                   <View style={styles.dupBanner}>
