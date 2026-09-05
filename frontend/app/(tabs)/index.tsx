@@ -30,6 +30,7 @@ import {
 } from "@/src/lib/api";
 import { useAuth } from "@/src/lib/auth";
 import CustomerEditModal from "@/src/components/CustomerEditModal";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 const STATUS_FILTERS = [
   { key: "all", label: "All" },
@@ -481,61 +482,64 @@ function AddCustomerModal({ visible, onClose, onAdded }: { visible: boolean; onC
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <Pressable style={styles.modalOverlay} onPress={onClose}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <View style={styles.sheetHandle} />
-              <Text style={styles.sheetTitle}>Add Customer</Text>
-              <View style={{ height: theme.space.md }} />
-              <TextInput
-                placeholder="Name"
-                placeholderTextColor={theme.color.muted}
-                value={name}
-                onChangeText={setName}
-                style={styles.input}
-                testID="add-name-input"
-              />
-              <TextInput
-                placeholder="Phone number"
-                placeholderTextColor={theme.color.muted}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                style={styles.input}
-                testID="add-phone-input"
-              />
-              <TextInput
-                placeholder="Address"
-                placeholderTextColor={theme.color.muted}
-                value={address}
-                onChangeText={setAddress}
-                multiline
-                style={[styles.input, { minHeight: 56, textAlignVertical: "top" }]}
-                testID="add-address-input"
-              />
-              <TextInput
-                placeholder="Note (optional) — e.g. interested in 3-door cabinet"
-                placeholderTextColor={theme.color.muted}
-                value={note}
-                onChangeText={setNote}
-                multiline
-                style={[styles.input, { minHeight: 56, textAlignVertical: "top" }]}
-                testID="add-note-input"
-              />
-              {err ? <Text style={styles.errText}>{err}</Text> : null}
-              <Pressable
-                onPress={submit}
-                style={[styles.primaryBtn, saving && { opacity: 0.6 }]}
-                disabled={saving}
-                testID="submit-add-customer"
-              >
-                <Text style={styles.primaryBtnText}>{saving ? "Saving..." : "Add"}</Text>
-              </Pressable>
-            </ScrollView>
-          </Pressable>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.sheet} onPress={() => {}}>
+          <KeyboardAwareScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bottomOffset={24}
+            contentContainerStyle={{ paddingBottom: theme.space.xl }}
+          >
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Add Customer</Text>
+            <View style={{ height: theme.space.md }} />
+            <TextInput
+              placeholder="Name"
+              placeholderTextColor={theme.color.muted}
+              value={name}
+              onChangeText={setName}
+              style={styles.input}
+              testID="add-name-input"
+            />
+            <TextInput
+              placeholder="Phone number"
+              placeholderTextColor={theme.color.muted}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              style={styles.input}
+              testID="add-phone-input"
+            />
+            <TextInput
+              placeholder="Address"
+              placeholderTextColor={theme.color.muted}
+              value={address}
+              onChangeText={setAddress}
+              multiline
+              style={[styles.input, { minHeight: 56, textAlignVertical: "top" }]}
+              testID="add-address-input"
+            />
+            <TextInput
+              placeholder="Note (optional) — e.g. interested in 3-door cabinet"
+              placeholderTextColor={theme.color.muted}
+              value={note}
+              onChangeText={setNote}
+              multiline
+              style={[styles.input, { minHeight: 56, textAlignVertical: "top" }]}
+              testID="add-note-input"
+            />
+            {err ? <Text style={styles.errText}>{err}</Text> : null}
+            <Pressable
+              onPress={submit}
+              style={[styles.primaryBtn, saving && { opacity: 0.6 }]}
+              disabled={saving}
+              testID="submit-add-customer"
+            >
+              <Text style={styles.primaryBtnText}>{saving ? "Saving..." : "Add"}</Text>
+            </Pressable>
+          </KeyboardAwareScrollView>
         </Pressable>
-      </KeyboardAvoidingView>
+      </Pressable>
     </Modal>
   );
 }
