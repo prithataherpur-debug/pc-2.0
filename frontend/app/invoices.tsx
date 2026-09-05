@@ -12,6 +12,7 @@ import { theme } from "@/src/lib/theme";
 import { api, Invoice, API, MoneyReceipt } from "@/src/lib/api";
 import { CustomerPicker, PickerCustomer } from "@/src/components/CustomerPicker";
 import { useAuth } from "@/src/lib/auth";
+import DateNavigator, { todayKey } from "@/src/components/DateNavigator";
 
 const fmt = (n: number) => "₹" + (Math.round(n * 100) / 100).toLocaleString("en-IN");
 
@@ -27,6 +28,7 @@ export default function InvoicesScreen() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [toast, setToast] = useState("");
+  const [date, setDate] = useState<string>(todayKey());
   // Deep-link highlight (e.g. from a LINKED receipt tag in the Daybook)
   const params = useLocalSearchParams<{ highlight?: string }>();
   const [highlightId, setHighlightId] = useState<string | null>(null);
@@ -49,11 +51,11 @@ export default function InvoicesScreen() {
 
   const load = useCallback(async () => {
     try {
-      const list = await api.listInvoices(200);
+      const list = await api.listInvoices(200, undefined, date);
       setItems(list);
     } catch (e) { console.log("inv err", e); }
     finally { setLoading(false); setRefreshing(false); }
-  }, []);
+  }, [date]);
 
   useEffect(() => { load(); }, [load]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -107,6 +109,8 @@ export default function InvoicesScreen() {
         </Pressable>
       </View>
 
+      <DateNavigator date={date} onChange={setDate} testIDPrefix="inv-date" />
+
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={theme.color.brand} /></View>
       ) : (
@@ -125,8 +129,8 @@ export default function InvoicesScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="document-text" size={44} color={theme.color.borderStrong} />
-              <Text style={styles.emptyTitle}>No invoices yet</Text>
-              <Text style={styles.emptySub}>Tap New to generate your first invoice.</Text>
+              <Text style={styles.emptyTitle}>No invoices on this day</Text>
+              <Text style={styles.emptySub}>Use the arrows to browse another day, or tap New to generate one.</Text>
             </View>
           }
           renderItem={({ item }) => (

@@ -2908,11 +2908,14 @@ async def create_sale(body: SaleBody, u=Depends(current_user)):
 
 
 @api_router.get("/sales", response_model=List[Sale])
-async def list_sales(u=Depends(current_user), scope: str = "all", days: int = 30):
-    """Workspace-wide by default: every employee can see every sale. scope=mine narrows to own."""
+async def list_sales(u=Depends(current_user), scope: str = "all", days: int = 30, date: Optional[str] = None):
+    """Workspace-wide by default: every employee can see every sale. scope=mine narrows to own.
+    Pass date=YYYY-MM-DD to return only that day's sales."""
     query: dict = {}
     if scope == "mine":
         query["user"] = u["username"]
+    if date:
+        query["date_key"] = date.strip()
     docs = await db.sales.find(query, {"_id": 0}).sort("timestamp", -1).limit(days * 50).to_list(days * 50)
     sales = [sale_from_doc(d) for d in docs]
     # Attach linked receipts (source_type='sale' & source_id=sale.id) for duplicate-prevention badges
@@ -3321,10 +3324,12 @@ async def create_invoice(body: InvoiceCreateBody, u=Depends(current_user)):
 
 
 @api_router.get("/invoices", response_model=List[Invoice])
-async def list_invoices(limit: int = 100, user: Optional[str] = None, u=Depends(current_user)):
+async def list_invoices(limit: int = 100, user: Optional[str] = None, date: Optional[str] = None, u=Depends(current_user)):
     q: dict = {}
     if user:
         q["user"] = user
+    if date:
+        q["date_key"] = date.strip()
     limit = max(1, min(500, limit))
     docs = await db.invoices.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     name_cache: dict = {}
@@ -3694,9 +3699,10 @@ async def create_receipt(body: ReceiptCreateBody, u=Depends(current_user)):
 
 
 @api_router.get("/receipts", response_model=List[MoneyReceipt])
-async def list_receipts(limit: int = 100, user: Optional[str] = None, u=Depends(current_user)):
+async def list_receipts(limit: int = 100, user: Optional[str] = None, date: Optional[str] = None, u=Depends(current_user)):
     q: dict = {}
     if user: q["user"] = user
+    if date: q["date_key"] = date.strip()
     limit = max(1, min(500, limit))
     docs = await db.receipts.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     out: List[MoneyReceipt] = []

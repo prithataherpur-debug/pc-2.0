@@ -12,6 +12,7 @@ import { theme } from "@/src/lib/theme";
 import { api, MoneyReceipt, API } from "@/src/lib/api";
 import { CustomerPicker, PickerCustomer } from "@/src/components/CustomerPicker";
 import { useAuth } from "@/src/lib/auth";
+import DateNavigator, { todayKey } from "@/src/components/DateNavigator";
 
 const fmt = (n: number) => "₹" + (Math.round(n * 100) / 100).toLocaleString("en-IN");
 type SrcType = "sale" | "invoice" | "collection" | "other";
@@ -44,14 +45,15 @@ export default function ReceiptsScreen() {
     src_type?: SrcType; src_id?: string; customer?: string; amount?: string;
   } | null>(null);
   const [toast, setToast] = useState("");
+  const [date, setDate] = useState<string>(todayKey());
 
   const load = useCallback(async () => {
     try {
-      const list = await api.listReceipts(200);
+      const list = await api.listReceipts(200, undefined, date);
       setItems(list);
     } catch (e) { console.log("rcpt err", e); }
     finally { setLoading(false); setRefreshing(false); }
-  }, []);
+  }, [date]);
 
   useEffect(() => { load(); }, [load]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -121,6 +123,8 @@ export default function ReceiptsScreen() {
         </Pressable>
       </View>
 
+      <DateNavigator date={date} onChange={setDate} testIDPrefix="rcpt-date" />
+
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={theme.color.brand} /></View>
       ) : (
@@ -135,8 +139,8 @@ export default function ReceiptsScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="receipt-outline" size={44} color={theme.color.borderStrong} />
-              <Text style={styles.emptyTitle}>No receipts yet</Text>
-              <Text style={styles.emptySub}>Tap New to log a payment.</Text>
+              <Text style={styles.emptyTitle}>No receipts on this day</Text>
+              <Text style={styles.emptySub}>Use the arrows to browse another day, or tap New to log a payment.</Text>
             </View>
           }
           renderItem={({ item }) => (

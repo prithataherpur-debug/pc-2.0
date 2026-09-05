@@ -174,3 +174,13 @@ Multi-user sales-call CRM. 1 admin + 7 employees log in and work through their o
 - **Add Customer form**: now has Address and Note fields (`address` added to Customer model/create; stored on customer doc, reused by receipt/invoice auto-fill).
 - **Sales admin edit/delete**: PATCH /api/sales/{id} now also accepts customer_name, customer_id, cash_amount/online_amount (amount = cash+online, mode auto), date_key (admin only). Sales screen: edit sheet has Customer, Payment (Cash/Online/Mixed), Sale date (admin), scrollable; a trash icon on each card (admin) + "Delete this sale" in the sheet. Delete confirm uses window.confirm on web (Alert.alert is a no-op on web — this was why admin "couldn't delete" in the browser).
 - **Edit Customer**: tap a customer card (name area) on Home → `CustomerEditModal` (name, phone, address, note + "Open customer ledger"). `PATCH /api/customers/{id}` (any signed-in user; phone unique → 409; syncs customer_name/mobile on that customer's invoices, receipts and sales).
+
+## Update — restore + UX fixes (Jun 2026, session 3)
+- **Project restored** from uploaded archive into `/app`; env preview URLs + MONGO_URL kept for this container.
+- **Daybook date navigator** fixed forward/back (UTC-safe `shiftDate` — was landing on same day in +offset TZs like IST).
+- **Address mandatory for new customers** across Home Add Customer, Punch Sale (new address field), Receipts & Invoices (only when creating a new customer, i.e. no `customer_id`).
+- **Workspace-wide customer search**: `GET /api/customers` lifts the `assigned_to` restriction when a `search` term is present, so any employee can find any customer by name/phone from the Home search bar; default (no search) still shows only their own list.
+- **Customer Ledger details + edit**: ledger now shows a details card (name, mobile, address, note) with an Edit button (header + card) reusing `CustomerEditModal`.
+- **Add Customer keyboard fix**: bottom sheet lifts above the keyboard via RN core `Keyboard` events + animated `marginBottom` (KeyboardAwareScrollView misbehaves inside RN Modal on Android).
+- **Daybook combined sale figure**: breakdown card shows a highlighted **TOTAL SALE (SALES + INVOICES)** = `total_collection.sales + total_collection.invoices` with the split beneath. No double-count (Daybook sales already excludes invoice-linked sales).
+- **Date-wise browsing on Sales / Invoices / Money Receipts**: new shared `src/components/DateNavigator.tsx` (prev / today / next, can't go future). Backend list endpoints accept optional `date=YYYY-MM-DD` (`/api/sales`, `/api/invoices`, `/api/receipts`) filtering by `date_key`. Frontend `listSales/listInvoices/listReceipts` take a `date` arg; each screen defaults to today and browses day-by-day.

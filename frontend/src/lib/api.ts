@@ -457,10 +457,11 @@ export const api = {
     }>(`/customers/${customerId}/ledger`),
 
   // ---- Invoice ----
-  listInvoices: (limit = 100, user?: string) => {
+  listInvoices: (limit = 100, user?: string, date?: string) => {
     const p = new URLSearchParams();
     p.set("limit", String(limit));
     if (user) p.set("user", user);
+    if (date) p.set("date", date);
     return req<Invoice[]>(`/invoices?${p.toString()}`);
   },
   createInvoice: (body: {
@@ -480,10 +481,11 @@ export const api = {
   deleteInvoice: (id: string) => req<{ deleted: boolean }>(`/invoices/${id}`, { method: "DELETE" }),
 
   // ---- Money Receipt ----
-  listReceipts: (limit = 100, user?: string) => {
+  listReceipts: (limit = 100, user?: string, date?: string) => {
     const p = new URLSearchParams();
     p.set("limit", String(limit));
     if (user) p.set("user", user);
+    if (date) p.set("date", date);
     return req<MoneyReceipt[]>(`/receipts?${p.toString()}`);
   },
   getReceiptSource: (sourceType: "sale" | "invoice" | "collection", sourceId: string) =>
@@ -595,7 +597,8 @@ export const api = {
   breakStart: () => req<AttendanceRec>(`/attendance/break-start`, { method: "POST" }),
   breakEnd: () => req<AttendanceRec>(`/attendance/break-end`, { method: "POST" }),
 
-  listSales: (scope: "mine" | "all" = "all") => req<Sale[]>(`/sales?scope=${scope}`),
+  listSales: (scope: "mine" | "all" = "all", date?: string) =>
+    req<Sale[]>(`/sales?scope=${scope}${date ? `&date=${date}` : ""}`),
   createSale: (payload: {
     customer_id?: string | null;
     customer_name?: string;

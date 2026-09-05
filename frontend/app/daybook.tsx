@@ -223,6 +223,21 @@ export default function DaybookScreen() {
         {data.total_collection ? (
           <View style={styles.tcCard}>
             <Text style={styles.tcTitle}>Breakdown</Text>
+            {/* Combined sale figure = punched sales + invoices */}
+            <View style={styles.saleFigureCard} testID="daybook-total-sale">
+              <View style={styles.saleFigureIcon}>
+                <Ionicons name="trending-up" size={18} color={theme.color.brand} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.saleFigureLabel}>TOTAL SALE (SALES + INVOICES)</Text>
+                <Text style={styles.saleFigureValue} testID="daybook-total-sale-value">
+                  {fmt((data.total_collection.sales ?? 0) + (data.total_collection.invoices ?? 0))}
+                </Text>
+                <Text style={styles.saleFigureSub}>
+                  Sales {fmt(data.total_collection.sales ?? 0)} · Invoices {fmt(data.total_collection.invoices ?? 0)}
+                </Text>
+              </View>
+            </View>
             <View style={styles.tcGrid}>
               <TCTile icon="calculator-outline" label="Cash counted" value={data.reconciliation?.verified ? fmt(data.reconciliation.counted_cash || 0) : "—"} />
               <TCTile icon="cart-outline" label="Sales" value={fmt(data.total_collection.sales ?? 0)} />
@@ -975,6 +990,19 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: theme.color.border,
   },
   tcTitle: { fontSize: 11, fontWeight: "800", color: theme.color.muted, letterSpacing: 1, marginBottom: 8 },
+  saleFigureCard: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: theme.color.brandTertiary,
+    borderWidth: 1, borderColor: theme.color.brand + "44",
+    borderRadius: theme.radius.md, padding: theme.space.md, marginBottom: 10,
+  },
+  saleFigureIcon: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: theme.color.surface,
+    alignItems: "center", justifyContent: "center",
+  },
+  saleFigureLabel: { fontSize: 10, fontWeight: "800", color: theme.color.brand, letterSpacing: 0.5 },
+  saleFigureValue: { fontSize: 24, fontWeight: "900", color: theme.color.onSurface, marginTop: 2 },
+  saleFigureSub: { fontSize: 11, fontWeight: "600", color: theme.color.muted, marginTop: 2 },
   tcGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tcTile: {
     flex: 1, minWidth: 140,

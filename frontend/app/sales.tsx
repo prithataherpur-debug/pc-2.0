@@ -12,6 +12,7 @@ import { api, Sale, API, TOKEN_KEY } from "@/src/lib/api";
 import { useAuth } from "@/src/lib/auth";
 import { storage } from "@/src/utils/storage";
 import PunchSaleModal from "@/src/components/PunchSaleModal";
+import DateNavigator, { todayKey } from "@/src/components/DateNavigator";
 
 export default function SalesScreen() {
   const insets = useSafeAreaInsets();
@@ -23,6 +24,7 @@ export default function SalesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [scope, setScope] = useState<"mine" | "all">("all");
+  const [date, setDate] = useState<string>(todayKey());
   const [punchOpen, setPunchOpen] = useState(false);
   const [editSale, setEditSale] = useState<Sale | null>(null);
   const [purchaseInput, setPurchaseInput] = useState("");
@@ -139,14 +141,14 @@ export default function SalesScreen() {
   const load = useCallback(async () => {
     try {
       const [list, tstats] = await Promise.all([
-        api.listSales(scope),
+        api.listSales(scope, date),
         api.salesToday(scope),
       ]);
       setSales(list);
       setToday({ count: tstats.count, revenue: tstats.revenue, profit: (tstats as any).profit ?? 0 });
     } catch (e) { console.log("sales err", e); }
     finally { setLoading(false); setRefreshing(false); }
-  }, [scope]);
+  }, [scope, date]);
 
   useEffect(() => { load(); }, [load]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -233,13 +235,15 @@ export default function SalesScreen() {
         })}
       </View>
 
+      <DateNavigator date={date} onChange={setDate} testIDPrefix="sales-date" />
+
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={theme.color.brand} /></View>
       ) : sales.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="cash-outline" size={56} color={theme.color.borderStrong} />
-          <Text style={styles.emptyTitle}>No sales yet</Text>
-          <Text style={styles.emptyText}>Tap Punch to log your first sale.</Text>
+          <Text style={styles.emptyTitle}>No sales on this day</Text>
+          <Text style={styles.emptyText}>Use the arrows to browse another day, or tap Punch to log a sale.</Text>
         </View>
       ) : (
         <FlatList
