@@ -16,8 +16,8 @@ import { useAuth } from "@/src/lib/auth";
 const fmt = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const shiftDate = (d: string, days: number) => {
-  const dt = new Date(d + "T00:00:00");
-  dt.setDate(dt.getDate() + days);
+  const dt = new Date(d + "T00:00:00Z");
+  dt.setUTCDate(dt.getUTCDate() + days);
   return dt.toISOString().slice(0, 10);
 };
 
