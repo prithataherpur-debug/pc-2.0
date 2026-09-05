@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { theme } from "@/src/lib/theme";
 import { api } from "@/src/lib/api";
+import CustomerEditModal from "@/src/components/CustomerEditModal";
 
 const fmt = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const fmtWhen = (iso: string) => {
@@ -29,6 +30,7 @@ export default function CustomerLedgerScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -81,12 +83,52 @@ export default function CustomerLedgerScreen() {
           <Text style={styles.hdrTitle} numberOfLines={1}>{data.customer.name}</Text>
           <Text style={styles.hdrSub}>{data.customer.phone}</Text>
         </View>
+        <Pressable onPress={() => setEditOpen(true)} style={styles.hdrEditBtn} testID="ledger-edit-customer" hitSlop={6}>
+          <Ionicons name="create-outline" size={16} color={theme.color.brand} />
+          <Text style={styles.hdrEditText}>Edit</Text>
+        </Pressable>
       </View>
 
       <ScrollView
         contentContainerStyle={{ padding: theme.space.lg, paddingBottom: insets.bottom + 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={theme.color.brand} />}
       >
+        {/* Customer details */}
+        <View style={styles.infoCard} testID="ledger-customer-info">
+          <View style={styles.infoHeadRow}>
+            <View style={styles.infoAvatar}>
+              <Text style={styles.infoAvatarText}>{(data.customer.name || "?").slice(0, 1).toUpperCase()}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.infoName} numberOfLines={1} testID="ledger-cust-name">{data.customer.name || "Unnamed"}</Text>
+              <Text style={styles.infoSub}>Customer details</Text>
+            </View>
+            <Pressable onPress={() => setEditOpen(true)} style={styles.infoEditBtn} testID="ledger-info-edit" hitSlop={6}>
+              <Ionicons name="create-outline" size={16} color="#fff" />
+            </Pressable>
+          </View>
+          <View style={styles.infoDivider} />
+          <View style={styles.infoRow}>
+            <Ionicons name="call-outline" size={15} color={theme.color.brand} />
+            <Text style={styles.infoRowLabel}>Mobile</Text>
+            <Text style={styles.infoRowValue} numberOfLines={1} testID="ledger-cust-mobile">{data.customer.phone || "—"}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="location-outline" size={15} color={theme.color.brand} />
+            <Text style={styles.infoRowLabel}>Address</Text>
+            <Text style={[styles.infoRowValue, { flex: 1, textAlign: "right" }]} testID="ledger-cust-address">
+              {data.customer.address || "Not added"}
+            </Text>
+          </View>
+          {data.customer.notes ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="document-text-outline" size={15} color={theme.color.brand} />
+              <Text style={styles.infoRowLabel}>Note</Text>
+              <Text style={[styles.infoRowValue, { flex: 1, textAlign: "right" }]} numberOfLines={2}>{data.customer.notes}</Text>
+            </View>
+          ) : null}
+        </View>
+
         {/* Balance card */}
         <View style={[styles.balCard, { backgroundColor: balanceIsDue ? "#B91C1C" : theme.color.success }]}>
           <Text style={styles.balLabel}>{balanceIsDue ? "AMOUNT DUE" : balance < 0 ? "ADVANCE PAID" : "SETTLED"}</Text>
@@ -146,6 +188,12 @@ export default function CustomerLedgerScreen() {
           ))
         )}
       </ScrollView>
+
+      <CustomerEditModal
+        customer={editOpen ? (data.customer as any) : null}
+        onClose={() => setEditOpen(false)}
+        onSaved={() => { setEditOpen(false); load(); }}
+      />
     </View>
   );
 }
@@ -240,6 +288,28 @@ const styles = StyleSheet.create({
   backIcon: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   hdrTitle: { fontSize: 17, fontWeight: "800", color: theme.color.onSurface },
   hdrSub: { fontSize: 12, color: theme.color.muted, marginTop: 2 },
+  hdrEditBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4, height: 32, paddingHorizontal: 12,
+    borderRadius: 16, backgroundColor: theme.color.brandTertiary,
+    borderWidth: 1, borderColor: theme.color.brand + "55",
+  },
+  hdrEditText: { fontSize: 12, fontWeight: "800", color: theme.color.brand },
+
+  infoCard: {
+    backgroundColor: theme.color.surfaceSecondary, borderRadius: theme.radius.lg,
+    borderWidth: 1, borderColor: theme.color.border,
+    padding: theme.space.md, marginBottom: theme.space.lg,
+  },
+  infoHeadRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  infoAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: theme.color.brandTertiary, alignItems: "center", justifyContent: "center" },
+  infoAvatarText: { color: theme.color.brand, fontWeight: "800", fontSize: 17 },
+  infoName: { fontSize: 15, fontWeight: "800", color: theme.color.onSurface },
+  infoSub: { fontSize: 11, color: theme.color.muted, marginTop: 1 },
+  infoEditBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.color.brand, alignItems: "center", justifyContent: "center" },
+  infoDivider: { height: 1, backgroundColor: theme.color.border, marginVertical: theme.space.md },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 5 },
+  infoRowLabel: { fontSize: 12, fontWeight: "700", color: theme.color.muted, width: 62 },
+  infoRowValue: { fontSize: 13, fontWeight: "700", color: theme.color.onSurface },
 
   balCard: {
     padding: theme.space.lg, borderRadius: theme.radius.lg,
