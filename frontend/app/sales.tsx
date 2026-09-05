@@ -5,7 +5,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons";
 
 import { theme } from "@/src/lib/theme";
 import { api, Sale, API, TOKEN_KEY } from "@/src/lib/api";

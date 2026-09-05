@@ -184,3 +184,12 @@ Multi-user sales-call CRM. 1 admin + 7 employees log in and work through their o
 - **Add Customer keyboard fix**: bottom sheet lifts above the keyboard via RN core `Keyboard` events + animated `marginBottom` (KeyboardAwareScrollView misbehaves inside RN Modal on Android).
 - **Daybook combined sale figure**: breakdown card shows a highlighted **TOTAL SALE (SALES + INVOICES)** = `total_collection.sales + total_collection.invoices` with the split beneath. No double-count (Daybook sales already excludes invoice-linked sales).
 - **Date-wise browsing on Sales / Invoices / Money Receipts**: new shared `src/components/DateNavigator.tsx` (prev / today / next, can't go future). Backend list endpoints accept optional `date=YYYY-MM-DD` (`/api/sales`, `/api/invoices`, `/api/receipts`) filtering by `date_key`. Frontend `listSales/listInvoices/listReceipts` take a `date` arg; each screen defaults to today and browses day-by-day.
+
+
+## Update — Expo SDK 57 upgrade (Jun 2026, session 4)
+- Upgraded Expo SDK 54 → **57** (`expo@57.0.20`, `react-native@0.86.3`, `react@19.2.3`) via `expo install expo@^57` + `expo install --fix`.
+- **app.json**: removed `newArchEnabled` and `android.edgeToEdgeEnabled` (both are defaults from SDK 55+). `expo install --fix` auto-added config plugins (expo-font, expo-image, expo-secure-store, expo-status-bar, expo-web-browser).
+- **Vector icons migrated** `@expo/vector-icons` → `@react-native-vector-icons/ionicons@13.1.3` (only Ionicons was used). All 28 screens/components now `import Ionicons from "@react-native-vector-icons/ionicons"`. Config plugin auto-added to app.json.
+- **Expo Go icon-font prewarm** (`src/hooks/use-icon-fonts.ts`) updated: under Expo Go (StoreClient) it loads the Ionicons `.ttf` from jsDelivr for `@react-native-vector-icons/ionicons@13.1.3` registered under family key `Ionicons` (the postScriptName the component renders with); native builds + web pass an empty map. Preserves the Android-Expo-Go workaround for 0-byte Metro font assets.
+- Verified: `expo-doctor` 20/20 passed, ESLint clean, web preview renders with all icons + navigation intact.
+- NOTE: users testing on **Expo Go** must use an Expo Go build that supports SDK 57.

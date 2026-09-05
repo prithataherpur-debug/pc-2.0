@@ -3,7 +3,7 @@ import {
   Modal, FlatList,
 } from "react-native";
 import { useEffect, useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { theme } from "@/src/lib/theme";
 import { api, Customer } from "@/src/lib/api";

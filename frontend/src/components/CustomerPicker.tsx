@@ -2,7 +2,7 @@ import {
   View, Text, StyleSheet, Pressable, TextInput, ActivityIndicator, ScrollView,
 } from "react-native";
 import { useEffect, useState, useRef } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons";
 import { theme } from "@/src/lib/theme";
 import { api, Customer } from "@/src/lib/api";
 

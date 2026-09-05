@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
 
