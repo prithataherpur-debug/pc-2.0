@@ -1,0 +1,38 @@
+{
+  "summary": "Verified the Daybook online-collection bug fix end-to-end (backend + UI). Backend pytest 5/5 PASS: (1) cash-punched sale + online receipt (6000) => grand_total.online rises by exactly 6000, cash unchanged, sales.online reflects it, and the sale entry flips to counted=true; (2) cash receipt against a cash sale still counts as cash (regression preserved); (3) invoice + online receipt (4500) => grand_total.online rises by 4500, invoices.online reflects it, invoice.counted=true and its linked_receipts carry online_amount; (4) sale created without any receipt is NOT counted (grand_total unchanged, counted=false, 'Not counted' path); (5) no double counting — a receipt linked to a same-day sale is not added to standalone_receipts (grand rises by amount only once). UI: /daybook renders as admin, the TOTAL COLLECTION card shows both 'Cash' and 'Online' chips (Cash ₹9,500 · Online ₹20,500), and the Breakdown card shows the new 'Cash collected' and 'Online collected' tiles (₹9,500 / ₹20,500) — matching test data (30k grand). Preview is NOT blank: login screen renders, admin/Admin@2026 logs in, /daybook opens with daybook-screen testID mounted.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "expo-image / RN-Web", "issue": "Console warning 'Image: style.resizeMode is deprecated. Please use props.resizeMode.' (non-blocking, carried from previous iterations)"},
+      {"component": "RN-Web pointerEvents", "issue": "'props.pointerEvents is deprecated. Use style.pointerEvents' — cosmetic web-only warning"},
+      {"component": "expo-notifications (web)", "issue": "'Listening to push token changes is not yet fully supported on web' — expected on web preview, not a bug"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration27_daybook_online_receipt.py",
+    "/app/test_reports/pytest/iteration27.xml"
+  ],
+  "action_items": [
+    "Optional cleanup: iteration-27 seeded 1 TEST_DBOnline_* customer with 4 sales + 1 invoice + 4 receipts today. Filter and hard-delete by name prefix TEST_DBOnline_ or by mobile prefix 9190 if a pristine DB is desired (fixture already calls DELETE /api/customers/{id} at teardown).",
+    "Optional (carried): migrate remaining <Image style={{resizeMode}}/> to <Image resizeMode={}/> and pointerEvents prop -> style.pointerEvents to silence RN-Web warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py:2109-2131 correctly builds inv_receipts_by_src with cash_amount/online_amount per linked receipt (with mode-based fallback) — this is the fix that makes an ONLINE money receipt against a cash-punched invoice appear as online in the daybook.",
+    "server.py:2134-2146 sums linked receipts' cash/online for counted invoices (instead of the invoice's stored split) and derives inv_total = inv_cash + inv_online — matches the bug fix intent.",
+    "server.py:2151-2163 does the same for manual sales — cash/online come from linked receipts. counted=false when there are no linked receipts (matches 'NOT COUNTED' UI).",
+    "server.py:2168-2189 standalone_receipts correctly excludes receipts whose source is counted TODAY (prevents double counting). Verified by test #5.",
+    "daybook.tsx:243-244 exposes the new tiles ('Cash collected' via grand_total.cash, 'Online collected' via grand_total.online) — verified visible in the UI screenshot.",
+    "daybook.tsx is still 1111 lines (>700 guideline); split SaleRow/InvoiceRow/ReceiptRow/EntryRow/CashDesk/Reconciliation into modules in a future refactor."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration27_daybook_online_receipt.py (new)"
+  ],
+  "success_rate": {"backend": "100% (5/5 iteration-27 tests)", "frontend": "100% for tested flows (preview boot, admin login, /daybook renders, Cash/Online chips + tiles present)"},
+  "seed_data_creation": "1 TEST_DBOnline_* customer + 4 sales + 1 invoice + 4 receipts posted today (for cash/online/invoice/no-receipt/no-dup cases). Fixture attempts DELETE /api/customers/{id} at teardown.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login admin/Admin@2026 on https://open-mobile-3.preview.emergentagent.com. Daybook route /daybook. To reproduce the online-collection scenario: POST /api/sales {customer_id,customer_name,amount,product,cash_amount=amount,online_amount=0} then POST /api/receipts {customer_id,customer_name,customer_mobile,amount,payment_mode:'online',cash_amount:0,online_amount:amount,source_type:'sale',source_id:<sale_id>}. Then GET /api/daybook?date=<today> and assert grand_total.online rose by amount and sales.online reflected it. Invoice items require unit_price (not rate); cash_amount+online_amount must equal computed total. testIDs: daybook-screen, daybook-total-sale, daybook-total-sale-value, login-username/password/submit."
+}

@@ -240,6 +240,8 @@ export default function DaybookScreen() {
             </View>
             <View style={styles.tcGrid}>
               <TCTile icon="calculator-outline" label="Cash counted" value={data.reconciliation?.verified ? fmt(data.reconciliation.counted_cash || 0) : "—"} />
+              <TCTile icon="cash-outline" label="Cash collected" value={fmt(data.grand_total.cash)} />
+              <TCTile icon="card-outline" label="Online collected" value={fmt(data.grand_total.online)} />
               <TCTile icon="cart-outline" label="Sales" value={fmt(data.total_collection.sales ?? 0)} />
               <TCTile icon="document-text-outline" label="Invoices" value={fmt(data.total_collection.invoices)} />
               <TCTile icon="wallet-outline" label="Due collection" value={fmt(data.total_collection.due_collection)} />

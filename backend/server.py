@@ -2109,11 +2109,22 @@ async def _build_daybook(day: str) -> dict:
     inv_receipts_by_src: dict = {}
     for r in rc_docs:
         if (r.get("source_type") or "").lower() == "invoice" and r.get("source_id"):
+            r_amt = float(r.get("amount") or 0)
+            r_mode = (r.get("payment_mode") or "cash").lower()
+            rc_c = r.get("cash_amount")
+            rc_o = r.get("online_amount")
+            if rc_c is None or rc_o is None:
+                if r_mode == "online":
+                    rc_c, rc_o = 0.0, r_amt
+                else:
+                    rc_c, rc_o = r_amt, 0.0
             inv_receipts_by_src.setdefault(r["source_id"], []).append({
                 "id": r["id"],
                 "receipt_no": r["receipt_no"],
-                "amount": float(r.get("amount") or 0),
-                "payment_mode": (r.get("payment_mode") or "cash").lower(),
+                "amount": r_amt,
+                "payment_mode": r_mode,
+                "cash_amount": float(rc_c or 0),
+                "online_amount": float(rc_o or 0),
                 "reference_no": r.get("reference_no") or "",
                 "source_type": "invoice",
                 "pdf_token": r.get("pdf_token"),
@@ -2124,39 +2135,31 @@ async def _build_daybook(day: str) -> dict:
             iv["pdf_token"] = _make_media_token(iv["pdf_path"])
         linked = inv_receipts_by_src.get(iv["id"], [])
         iv["linked_receipts"] = linked
-        # Rule: an invoice's cash counts in the daybook ONLY if a money receipt
-        # has been generated against it. No receipt → not counted.
+        # Rule: an invoice's cash/online counts in the daybook ONLY if a money receipt
+        # has been generated against it. The amount counted is the money actually
+        # collected via those receipts (so an online receipt shows as online).
         iv["counted"] = len(linked) > 0
-        total = float(iv.get("total") or 0)
-        c_amt = iv.get("cash_amount")
-        o_amt = iv.get("online_amount")
-        if c_amt is None or o_amt is None:
-            # Legacy invoices without split — derive from payment_mode (default cash)
-            mode = (iv.get("payment_mode") or "cash").lower()
-            if mode == "online":
-                c_amt, o_amt = 0.0, total
-            elif mode == "mixed":
-                c_amt, o_amt = total, 0.0
-            else:
-                c_amt, o_amt = total, 0.0
         if iv["counted"]:
-            inv_total += total
-            inv_cash += float(c_amt or 0)
-            inv_online += float(o_amt or 0)
+            for r in linked:
+                inv_cash += float(r.get("cash_amount") or 0)
+                inv_online += float(r.get("online_amount") or 0)
+    inv_total = inv_cash + inv_online
     inv_totals = {"cash": inv_cash, "online": inv_online, "total": inv_total}
 
-    # Manual sales for the day (cash / online split is the money actually received at sale time)
+    # Manual sales for the day — money counted = what was actually collected via the
+    # money receipts raised against each sale (cash + online split from the receipts).
     sale_cash = 0.0
     sale_online = 0.0
     for s in sale_docs:
         linked = receipts_by_src.get(s["id"], [])
         s["linked_receipts"] = linked
-        # Rule: a sale's cash counts in the daybook ONLY if a money receipt has been
-        # generated against it. No receipt → not counted.
+        # Rule: a sale counts in the daybook ONLY if a money receipt has been generated
+        # against it. No receipt → not counted.
         s["counted"] = len(linked) > 0
         if s["counted"]:
-            sale_cash += float(s.get("cash_amount") or 0)
-            sale_online += float(s.get("online_amount") or 0)
+            for r in linked:
+                sale_cash += float(r.get("cash_amount") or 0)
+                sale_online += float(r.get("online_amount") or 0)
     sale_totals = {"cash": sale_cash, "online": sale_online, "total": sale_cash + sale_online}
 
     # Standalone receipts = fresh money not already counted through a source listed on THIS day.
