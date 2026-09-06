@@ -444,13 +444,14 @@ export const api = {
       summary: {
         total_billed: number; total_billed_manual: number; total_invoices: number;
         total_received: number; due_balance: number;
+        overdue_total?: number; overdue_count?: number;
       };
       timeline: {
         kind: "sale" | "invoice" | "receipt";
         id: string; when: string; amount: number; title: string; by?: string; notes?: string;
         pdf_token?: string | null; invoice_no?: string | null;
         items_count?: number; payment_mode?: string; source_type?: string; source_label?: string;
-        source?: string;
+        source?: string; overdue?: boolean;
         receipts?: { id: string; receipt_no: string; amount: number; pdf_token?: string | null }[];
       }[];
       counts: { sales: number; invoices: number; receipts: number };

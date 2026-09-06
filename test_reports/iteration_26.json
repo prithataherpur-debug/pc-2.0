@@ -1,0 +1,41 @@
+{
+  "summary": "Verified (1) Expo SDK 54 rollback: web preview boots without red-screen, login as admin/Admin@2026 succeeds, home renders with customer list, bottom tab nav (Calls/Follow-ups/Progress/More) works, Ionicons render via @expo/vector-icons. (2) Customer-ledger overdue feature works end-to-end: backend pytest (3/3 passing) confirms sales and invoices without receipts get overdue=true and clear when a receipt with source_type='sale'/'invoice' + source_id is created; frontend ledger shows red 'OVERDUE' badges with testIDs ledger-overdue-sale-{id} / ledger-overdue-invoice-{id}, the hint 'No money receipt linked — treated as overdue', and the strip 'Overdue (no receipt): ₹7,500 · 2 items' (testID ledger-overdue-strip). (3) Regression: Daybook shows 'TOTAL SALE (SALES + INVOICES)' with the 'NOT COUNTED' badge on un-receipted rows; sales/invoices/receipts date navigators (prev/next/today testIDs) all present and mounted. No console errors, only benign RN-Web deprecation warnings (style.resizeMode, pointerEvents) and expo-notifications web-not-supported warning — not blockers.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/invoices", "issue": "When posting {items:[{name,qty,rate}]} without an explicit 'total'/'amount', backend stores invoice.total=0 (see raw ledger event amount=0 for INV-000003). This is not part of the current review but it causes an edge case where an overdue invoice with total=0 still increments summary.overdue_count while overdue_total stays 0 — so the strip may hide even though a badge is shown. Consider server-side total computation from items OR align strip visibility with overdue_count>0."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "expo-image / RN-Web", "issue": "Console warning 'Image: style.resizeMode is deprecated. Please use props.resizeMode.' Non-blocking but should be migrated to props.resizeMode on <Image> usages."},
+      {"component": "RN-Web pointerEvents", "issue": "'props.pointerEvents is deprecated. Use style.pointerEvents' — likely in a login/screen component. Cosmetic on web preview only."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration26_ledger_overdue.py",
+    "/app/test_reports/pytest/iteration26.xml"
+  ],
+  "action_items": [
+    "Optional: recompute invoice.total from items server-side (or validate rate*qty on the API) so overdue_total matches overdue_count for invoices created purely from item lines.",
+    "Optional cleanup: migrate remaining <Image style={{resizeMode}}/> to <Image resizeMode={} /> and pointerEvents prop -> style.pointerEvents to silence RN-Web deprecation warnings.",
+    "Optional cleanup: remove 3 TEST_Overdue_* customers left in the DB from this test run (customer ids 9dc4a6d0-..., 4db12d18-...) if you want a pristine DB."
+  ],
+  "critical_code_review_comments": [
+    "server.py:1136 correctly excludes invoice-shadow sales (source=='invoice') from overdue flagging so that a sale created by an invoice is not double-counted.",
+    "server.py:1153 flags any invoice with zero linked receipts as overdue — matches spec.",
+    "ledger.tsx:149-158 correctly gates the overdue strip on overdue_total>0; consider also OR overdue_count>0 to cover the zero-total invoice edge case flagged above.",
+    "All required testIDs present: ledger-overdue-strip, ledger-overdue-sale-{id}, ledger-overdue-invoice-{id}, sales/inv/rcpt-date-{prev,next,today}, login-{username,password,submit}."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration26_ledger_overdue.py (new)"
+  ],
+  "success_rate": {"backend": "100% (3/3 iteration-26 tests)", "frontend": "100% for tested flows (SDK54 boot, login, tab nav, ledger overdue UI, daybook labels, date navigators)"},
+  "seed_data_creation": "Created 2 test customers (TEST_Overdue_6cd1fe, TEST_Overdue_f58752) with a mix of overdue/receipted sales and one un-receipted invoice for UI verification. Safe to delete.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use admin/Admin@2026 on https://open-mobile-3.preview.emergentagent.com. Ledger route: /customer/{id}/ledger. To force overdue state: POST /api/sales with {customer_id, customer_name, customer_mobile, amount, notes} — DO NOT create a matching receipt. To clear: POST /api/receipts with {customer_id, customer_name, customer_mobile, amount, mode:'cash', source_type:'sale', source_id:<sale_id>}. testIDs used: ledger-overdue-strip, ledger-overdue-sale-{id}, ledger-overdue-invoice-{id}."
+}

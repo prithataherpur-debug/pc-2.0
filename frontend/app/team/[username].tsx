@@ -5,7 +5,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
-import Ionicons from "@react-native-vector-icons/ionicons";
+import { Ionicons } from "@expo/vector-icons";
 
 import { theme } from "@/src/lib/theme";
 import { api, User, Sale, STATUS_COLOR, STATUS_LABEL } from "@/src/lib/api";

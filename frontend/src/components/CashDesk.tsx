@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, Pressable, TextInput, ActivityIndicator, Image, Alert, Platform,
   useWindowDimensions, Modal, ScrollView,
 } from "react-native";
-import Ionicons from "@react-native-vector-icons/ionicons";
+import { Ionicons } from "@expo/vector-icons";
 
 import { api, DaybookData, DaybookPhoto, DENOMS } from "@/src/lib/api";
 import { uploadSelfie, mediaUrl } from "@/src/lib/media";

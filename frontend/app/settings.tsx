@@ -4,7 +4,7 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Ionicons from "@react-native-vector-icons/ionicons";
+import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { useFocusEffect, useRouter } from "expo-router";
 

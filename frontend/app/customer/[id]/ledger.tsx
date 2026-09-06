@@ -4,7 +4,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
-import Ionicons from "@react-native-vector-icons/ionicons";
+import { Ionicons } from "@expo/vector-icons";
 
 import { theme } from "@/src/lib/theme";
 import { api } from "@/src/lib/api";
@@ -146,6 +146,14 @@ export default function CustomerLedgerScreen() {
               <Text style={styles.balChipValue}>{fmt(data.summary.total_received)}</Text>
             </View>
           </View>
+          {(data.summary.overdue_count ?? 0) > 0 ? (
+            <View style={styles.overdueStrip} testID="ledger-overdue-strip">
+              <Ionicons name="alert-circle" size={14} color="#fff" />
+              <Text style={styles.overdueStripText}>
+                Overdue (no receipt): {fmt(data.summary.overdue_total ?? 0)} · {data.summary.overdue_count ?? 0} item{(data.summary.overdue_count ?? 0) === 1 ? "" : "s"}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Counts row */}
@@ -231,11 +239,22 @@ function TimelineItem({ ev, isLast, onOpen }: {
       </View>
       <Pressable onPress={ev.pdf_token ? onOpen : undefined} style={styles.tlCard}>
         <View style={styles.tlHead}>
-          <Text style={styles.tlTitle}>{ev.title || ev.kind}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+            <Text style={styles.tlTitle} numberOfLines={1}>{ev.title || ev.kind}</Text>
+            {ev.overdue ? (
+              <View style={styles.overdueBadge} testID={`ledger-overdue-${ev.kind}-${ev.id}`}>
+                <Ionicons name="alert-circle" size={9} color="#fff" />
+                <Text style={styles.overdueBadgeText}>OVERDUE</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={[styles.tlAmount, { color: kindMeta.color }]}>
             {kindMeta.sign}{fmt(ev.amount)}
           </Text>
         </View>
+        {ev.overdue ? (
+          <Text style={styles.overdueHint}>No money receipt linked — treated as overdue</Text>
+        ) : null}
         <Text style={styles.tlMeta}>{fmtWhen(ev.when)}{ev.by ? ` · by ${ev.by}` : ""}</Text>
         {ev.notes ? <Text style={styles.tlNotes} numberOfLines={2}>{ev.notes}</Text> : null}
         {ev.kind === "receipt" && ev.payment_mode ? (
@@ -278,6 +297,19 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.brandTertiary, borderWidth: 1, borderColor: theme.color.brand + "44",
   },
   tlRcptChipText: { fontSize: 10, fontWeight: "800", color: theme.color.brand },
+  overdueBadge: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: theme.radius.pill,
+    backgroundColor: "#B91C1C",
+  },
+  overdueBadgeText: { fontSize: 8, fontWeight: "900", letterSpacing: 0.5, color: "#fff" },
+  overdueHint: { fontSize: 10, fontWeight: "700", color: "#B91C1C", marginTop: 3 },
+  overdueStrip: {
+    flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10,
+    backgroundColor: "rgba(0,0,0,0.18)", borderRadius: theme.radius.md,
+    paddingHorizontal: 10, paddingVertical: 8,
+  },
+  overdueStripText: { flex: 1, fontSize: 12, fontWeight: "800", color: "#fff" },
   container: { flex: 1, backgroundColor: theme.color.surface },
   hdr: {
     flexDirection: "row", alignItems: "center", gap: 8,

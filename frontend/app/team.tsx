@@ -5,7 +5,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
-import Ionicons from "@react-native-vector-icons/ionicons";
+import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 import { theme } from "@/src/lib/theme";

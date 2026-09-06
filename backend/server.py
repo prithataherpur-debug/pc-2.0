@@ -1131,6 +1131,9 @@ async def customer_ledger(cust_id: str, u=Depends(current_user)):
                 {"id": r["id"], "receipt_no": r["receipt_no"], "amount": float(r.get("amount") or 0), "pdf_token": r.get("pdf_token")}
             )
     for s in sales:
+        s_receipts = rc_by_src.get(s["id"], [])
+        # Overdue = a real sale (not an invoice-auto-sale) with no money receipt linked to it.
+        s_overdue = len(s_receipts) == 0 and s.get("source") != "invoice"
         timeline.append({
             "kind": "sale",
             "id": s["id"],
@@ -1142,9 +1145,12 @@ async def customer_ledger(cust_id: str, u=Depends(current_user)):
             "invoice_no": s.get("invoice_no"),
             "source": s.get("source", "manual"),
             "payment_mode": s.get("payment_mode"),
-            "receipts": rc_by_src.get(s["id"], []),
+            "receipts": s_receipts,
+            "overdue": s_overdue,
         })
     for iv in invoices:
+        iv_receipts = rc_by_src.get(iv["id"], [])
+        iv_overdue = len(iv_receipts) == 0
         timeline.append({
             "kind": "invoice",
             "id": iv["id"],
@@ -1155,6 +1161,8 @@ async def customer_ledger(cust_id: str, u=Depends(current_user)):
             "notes": iv.get("notes") or "",
             "pdf_token": iv.get("pdf_token"),
             "items_count": len(iv.get("items") or []),
+            "receipts": iv_receipts,
+            "overdue": iv_overdue,
         })
     for r in receipts:
         timeline.append({
@@ -1182,6 +1190,18 @@ async def customer_ledger(cust_id: str, u=Depends(current_user)):
     total_billed = total_billed_no_inv_dup + total_invoices
     due_balance = total_billed - total_received
 
+    # Overdue = sales/invoices with NO money receipt linked to them.
+    overdue_total = 0.0
+    overdue_count = 0
+    for s in sales:
+        if s.get("source") != "invoice" and len(rc_by_src.get(s["id"], [])) == 0:
+            overdue_total += float(s.get("amount") or 0)
+            overdue_count += 1
+    for iv in invoices:
+        if len(rc_by_src.get(iv["id"], [])) == 0:
+            overdue_total += float(iv.get("total") or 0)
+            overdue_count += 1
+
     return {
         "customer": customer_from_doc(cust).dict(),
         "summary": {
@@ -1191,6 +1211,8 @@ async def customer_ledger(cust_id: str, u=Depends(current_user)):
             "total_invoices": total_invoices,
             "total_received": total_received,
             "due_balance": due_balance,
+            "overdue_total": overdue_total,
+            "overdue_count": overdue_count,
         },
         "timeline": timeline,
         "counts": {
